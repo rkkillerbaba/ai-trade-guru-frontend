@@ -9,18 +9,20 @@ interface ChatMessage {
   reasoning_details?: string;
 }
 
-// 💎 Ultra-Premium Institutional Text Formatter Engine
+// 💎 Bulletproof Premium Text & Markdown Formatter
 function ProfessionalMarkdown({ text }: { text: string }) {
   if (!text) return null;
+  
+  // Line by line split taaki list aur spacing clean render ho
   const lines = text.split('\n');
   
   return (
-    <div className="space-y-3.5 text-slate-700 leading-relaxed font-sans antialiased">
+    <div className="space-y-3 text-slate-700 leading-relaxed font-sans antialiased">
       {lines.map((line, lIdx) => {
-        const cleanLine = line.trim();
+        let cleanLine = line.trim();
         if (!cleanLine) return <div key={lIdx} className="h-1.5" />;
 
-        // Subheadings (###) Ko Clean Premium Look Dena
+        // Institutional Headings parsing (### Title)
         if (cleanLine.startsWith('###')) {
           return (
             <h3 key={lIdx} className="text-[13px] font-bold text-slate-900 mt-5 mb-1.5 tracking-wider uppercase border-l-2 border-blue-600 pl-2.5">
@@ -29,15 +31,19 @@ function ProfessionalMarkdown({ text }: { text: string }) {
           );
         }
 
-        // Clean Professional List Items
-        const isBullet = cleanLine.startsWith('* ') || cleanLine.startsWith('- ');
-        const parts = (isBullet ? cleanLine.substring(2) : cleanLine).split(/(\*\*.*?\*\*)/g);
+        // Checklist/Bullet points check
+        const isBullet = cleanLine.startsWith('* ') || cleanLine.startsWith('- ') || cleanLine.startsWith('• ');
+        if (isBullet) {
+          cleanLine = cleanLine.replace(/^([\*\-\•]\s*)/, '');
+        }
+
+        // Strict split matching pattern taaki ** dynamic tokens detect hon
+        const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
         
         const renderedText = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
-            // Key metrics aur bold elements ko subtle high-contrast inline badge look dena
             return (
-              <strong key={pIdx} className="font-semibold text-slate-950 bg-slate-100 px-1 py-0.5 rounded text-[13px]">
+              <strong key={pIdx} className="font-bold text-slate-950 bg-slate-100/80 px-1 py-0.5 rounded text-[13px] inline-block tracking-tight mx-0.5">
                 {part.slice(2, -2)}
               </strong>
             );
@@ -105,7 +111,7 @@ export default function PremiumDashboard() {
         }),
       });
 
-      if (!response.ok) throw new Error('Server unexpected response status');
+      if (!response.ok) throw new Error('Server response anomaly');
 
       const data = await response.json();
       let parsedContent = "";
@@ -133,7 +139,7 @@ export default function PremiumDashboard() {
       console.error(error);
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: "System connection refresh requested. Please submit again." }
+        { role: 'assistant', content: "Telemetry synchronization reset. Please re-submit metrics." }
       ]);
     } finally {
       setLoading(false);
@@ -141,16 +147,16 @@ export default function PremiumDashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50/60 text-slate-800 antialiased">
+    <div className="flex flex-col h-screen bg-slate-50/70 text-slate-800 antialiased font-sans">
       
-      {/* 🔮 Injecting Premium Google Fonts Dynamically */}
+      {/* 🔮 Injecting Premium Google Fonts Directly */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-      {/* Embedded CSS Style Overrides for Ultimate Typography Experience */}
+      {/* Global CSS Force Rules For True Typography Styling */}
       <style jsx global>{`
-        body {
+        html, body, p, div, button, textarea {
           font-family: 'Plus Jakarta Sans', sans-serif !important;
         }
         .font-mono-premium {
@@ -158,7 +164,7 @@ export default function PremiumDashboard() {
         }
       `}</style>
 
-      {/* Header */}
+      {/* Header Bar */}
       <header className="px-6 py-4 bg-white border-b border-slate-200/80 flex justify-between items-center shadow-sm relative z-10">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-slate-900 rounded-lg text-white shadow-sm">
@@ -176,7 +182,7 @@ export default function PremiumDashboard() {
         </div>
       </header>
 
-      {/* Main Chat Area */}
+      {/* Central Chat Feed Container */}
       <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-3xl mx-auto space-y-6 py-4">
           {messages.filter(m => m && m.role !== 'system').map((msg, i) => (
@@ -189,7 +195,7 @@ export default function PremiumDashboard() {
                 ) : (
                   <div className="bg-white border border-slate-200/70 shadow-sm rounded-2xl p-6 transition-all hover:shadow-md">
                     
-                    {/* Deep Reasoning Dropdown using JetBrains Mono */}
+                    {/* Deep Reasoning Dropdown using Premium JetBrains Mono */}
                     {msg.reasoning_details && (
                       <details className="mb-4 text-xs bg-slate-50 border border-slate-200/60 rounded-xl overflow-hidden group">
                         <summary className="cursor-pointer font-semibold text-slate-500 hover:text-slate-800 p-3 flex items-center justify-between select-none transition-colors">
@@ -205,12 +211,12 @@ export default function PremiumDashboard() {
                       </details>
                     )}
 
-                    {/* Main AI Body Output with Premium Refined Structure */}
+                    {/* Main Dynamic Extracted AI Report Message Layout */}
                     <div className="flex items-start gap-3">
                       <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md shrink-0 mt-0.5">
                         <Sparkles size={14} />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 w-full">
                         <ProfessionalMarkdown text={msg.content} />
                       </div>
                     </div>
@@ -231,7 +237,7 @@ export default function PremiumDashboard() {
         </div>
       </div>
 
-      {/* Input Center */}
+      {/* Action Controller Footer */}
       <footer className="p-4 bg-white border-t border-slate-200/80 shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
         <form onSubmit={sendMessage} className="max-w-3xl mx-auto flex items-end gap-2">
           
