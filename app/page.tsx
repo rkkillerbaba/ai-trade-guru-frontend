@@ -12,7 +12,7 @@ interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   reasoning_details?: string;
-  timestamp?: string; // 🕒 WhatsApp style log integration mapping
+  timestamp?: string;
 }
 
 interface AIModel {
@@ -25,6 +25,7 @@ interface AttachedFileMeta {
   name: string;
   url: string;
   parsedContent: string;
+  isImage: boolean; // 🖼️ Track image files for specialized backend vision pipeline
 }
 
 const AVAILABLE_MODELS: AIModel[] = [
@@ -95,7 +96,6 @@ export default function CombinedDashboard() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   
-  // 📄 State for holding file payload tracking out of textarea viewport
   const [attachedFile, setAttachedFile] = useState<AttachedFileMeta | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -116,7 +116,6 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 📅 WHATSAPP STYLE DATE PARSER HELPER
   const getWhatsAppDateLabel = (dateString?: string) => {
     if (!dateString) return 'TODAY';
     const msgDate = new Date(dateString);
@@ -160,7 +159,6 @@ export default function CombinedDashboard() {
         .order('id', { ascending: true });
 
       if (!historyError && history && history.length > 0) {
-        // Map created_at dynamically to timestamp state layer configuration safely
         const formattedHistory = history.map((m: any) => ({
           role: m.role,
           content: m.content,
@@ -217,6 +215,8 @@ export default function CombinedDashboard() {
     if (!file || !sessionId) return;
 
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const isImgFile = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExtension || '');
+    
     setUploadingFile(true);
     setUploadStatus(`Uploading to Supabase...`);
 
@@ -243,7 +243,10 @@ export default function CombinedDashboard() {
 
       let extractedData = "";
 
-      if (['xlsx', 'xls', 'csv'].includes(fileExtension || '')) {
+      // 🖼️ If it's an image, bypass client parser. Direct public asset payload mapping to OpenRouter Vision
+      if (isImgFile) {
+        extractedData = "IMAGE_ASSET_MARKER";
+      } else if (['xlsx', 'xls', 'csv'].includes(fileExtension || '')) {
         const XLSX = (window as any).XLSX;
         if (XLSX) {
           const d = await file.arrayBuffer();
@@ -268,11 +271,11 @@ export default function CombinedDashboard() {
         });
       }
 
-      // 🌟 TEXTAREA REMOVE CONTEXT INTERFACES: Textarea remains clean, data loaded safely in background state block
       setAttachedFile({
         name: file.name,
         url: publicFileUrl,
-        parsedContent: extractedData.trim()
+        parsedContent: extractedData.trim(),
+        isImage: isImgFile
       });
 
     } catch (err: any) {
@@ -293,9 +296,9 @@ export default function CombinedDashboard() {
     let dynamicDisplayContent = input.trim();
     const currentISOString = new Date().toISOString();
 
-    // Secure backend payload structural mapping layers
     if (attachedFile) {
-      rawUserPayloadContent += `\n\n[Asset Reference Ledger Data: ${attachedFile.url}]\n${attachedFile.parsedContent}`;
+      // Direct pass image or parsed text block structure safely
+      rawUserPayloadContent += `\n\n[Asset Reference Ledger Data: ${attachedFile.url}]\n${attachedFile.isImage ? '' : attachedFile.parsedContent}`;
       if (!dynamicDisplayContent) {
         dynamicDisplayContent = `📄 Sent File Data: ${attachedFile.name}`;
       } else {
@@ -308,7 +311,7 @@ export default function CombinedDashboard() {
     
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
-    setAttachedFile(null); // Clean attachment reference overlay card immediately
+    setAttachedFile(null);
     setLoading(true);
 
     await supabase.from('chat_messages').insert([
@@ -422,7 +425,6 @@ export default function CombinedDashboard() {
       <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
         <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
           {messages.filter(m => m && m.role !== 'system').map((msg, i) => {
-            // 📅 WhatsApp Style Date Header Trigger Condition Check
             const currentMsgDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : new Date().toDateString();
             const filteredValidMessages = messages.filter(m => m && m.role !== 'system');
             const mapIndexInFiltered = filteredValidMessages.indexOf(msg);
@@ -434,7 +436,6 @@ export default function CombinedDashboard() {
 
             return (
               <div key={i} className="w-full flex flex-col">
-                {/* 📅 WHATSAPP STYLE DATE BAR COMPONENT */}
                 {showWhatsAppDateLine && (
                   <div className="flex justify-center my-4 select-none animate-fadeIn">
                     <span className={`text-[10px] font-bold px-3 py-1 rounded-md shadow-sm tracking-wider uppercase border font-mono ${
@@ -469,7 +470,6 @@ export default function CombinedDashboard() {
                       </div>
                     )}
 
-                    {/* 🕒 WHATSAPP STYLE SUBTLE TIMING Display OVERLAY */}
                     <span className={`absolute bottom-1.5 right-3.5 text-[9px] font-mono select-none ${
                       msg.role === 'user' 
                         ? (isDarkMode ? 'text-cyan-400/70' : 'text-slate-400') 
@@ -557,7 +557,6 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
-          {/* 💎 SAAS STANDARD CHIP ATTACHMENT PANEL OVERLAY */}
           {attachedFile && (
             <div className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border max-w-sm transition-all shadow-sm animate-fadeIn ${
               isDarkMode ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
@@ -582,7 +581,7 @@ export default function CombinedDashboard() {
               ref={fileInputRef} 
               className="hidden" 
               onChange={handleFileUpload} 
-              accept=".pdf,.xlsx,.xls,.csv,.txt,.log,.json,.docx" 
+              accept=".pdf,.xlsx,.xls,.csv,.txt,.log,.json,.docx,.jpg,.jpeg,.png,.webp" 
             />
             
             <button 
