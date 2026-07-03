@@ -15,12 +15,13 @@ interface AIModel {
   badge: string;
 }
 
+// 🌐 Stable & Fast Premium Model Mapping (Nvidia updated to Nemotron Ultra)
 const AVAILABLE_MODELS: AIModel[] = [
   { name: 'Gemini Pro', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
-  { name: 'Meta Pro', id: 'meta-llama/llama-3.3-70b-instruct:free', badge: 'FAST CHAT' },
+  { name: 'Venice Pro', id: 'venice/uncensored-24b:free', badge: 'FAST CHAT' },
   { name: 'GPT Pro', id: 'openai/gpt-oss-120b:free', badge: 'INTELLLECT' },
-  { name: 'Hermes Pro', id: 'nousresearch/hermes-3-llama-3.1-405b:free', badge: 'DEEP THINK' },
-  { name: 'Pro', id: 'nvidia/nemotron-3-ultra-550b-a55b:free', badge: 'STRATEGY' }
+  { name: 'GPT Lite', id: 'openai/gpt-oss-20b:free', badge: 'SPEED' },
+  { name: 'Nemotron Ultra', id: 'nvidia/nemotron-3-ultra-550b-a55b:free', badge: 'STRATEGY' }
 ];
 
 function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean }) {
@@ -90,6 +91,7 @@ export default function CombinedDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Close drop-up when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -100,6 +102,7 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // PDF JS library injection
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
@@ -156,7 +159,7 @@ export default function CombinedDashboard() {
       reader.onload = (event) => {
         const text = event.target?.result;
         if (typeof text === 'string') {
-          setInput((prev) => `${prev}\n[File Context Frame: ${file.name}]\n${text}`.trim());
+          setInput((prev) => `${prev}\n[File Content Frame: ${file.name}]\n${text}`.trim());
         }
       };
       reader.readAsText(file);
@@ -184,7 +187,7 @@ export default function CombinedDashboard() {
             content: msg.content || "",
             reasoning_details: msg.reasoning_details || null
           })),
-          engine_id: selectedModel.id // Updated from model_name to fix protected warnings
+          engine_id: selectedModel.id
         }),
       });
 
@@ -308,12 +311,13 @@ export default function CombinedDashboard() {
         </div>
       </div>
 
-      {/* Footer Center Action Controller Panel */}
+      {/* 🛠️ Compact Professional Footer Control Panel */}
       <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
       }`}>
         <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
           
+          {/* Modern Floating Popover Trigger */}
           <div className="flex items-center justify-between gap-2 px-1 relative" ref={menuRef}>
             <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400 font-mono-premium' : 'text-slate-500'}`}>
               Engine Protocol:
@@ -333,7 +337,7 @@ export default function CombinedDashboard() {
                 <ChevronUp size={12} className={`transform transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Modern Popover with Gold Check */}
+              {/* 🔮 Modern Drop-up Popover Drawer with Golden VIP Check Icons */}
               {isMenuOpen && (
                 <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md transition-all z-50 ${
                   isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'
@@ -356,6 +360,7 @@ export default function CombinedDashboard() {
                           }`}
                         >
                           <span>{model.name}</span>
+                          {/* 🌟 Gold VIP Check Icon ([#d4af37]) */}
                           {isSelected && <Check size={13} className="shrink-0 stroke-[3] text-[#d4af37]" />}
                         </button>
                       );
@@ -370,6 +375,7 @@ export default function CombinedDashboard() {
           <div className="flex items-center gap-2">
             <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.txt,.csv,.json,.log" />
             
+            {/* Attachment Button */}
             <button 
               type="button" 
               onClick={() => fileInputRef.current?.click()} 
@@ -392,13 +398,17 @@ export default function CombinedDashboard() {
                     : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
                 }`}
               />
+              
+              {/* Giant Standard Round Touch-Friendly Send Button */}
               <button 
                 type="button"
                 disabled={loading || !input.trim() || uploadingPdf}
                 onClick={sendMessage}
-                className={`absolute right-2 w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition-all flex items-center justify-center shadow-md ${
-                  isDarkMode ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'bg-slate-900 text-white hover:bg-slate-800'
-                } disabled:opacity-20`}
+                className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${
+                  isDarkMode 
+                    ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' 
+                    : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
+                }`}
                 style={{ top: '50%', transform: 'translateY(-50%)' }}
               >
                 <Send size={15} className="stroke-[2.5]" />
