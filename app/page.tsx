@@ -39,26 +39,40 @@ export default function CyberDashboard() {
         body: JSON.stringify({
           messages: updatedMessages.map(msg => ({
             role: msg.role,
-            content: msg.content,
+            content: msg.content || "",
             reasoning_details: msg.reasoning_details || null
           }))
         }),
       });
 
+      if (!response.ok) {
+        throw new Error('Server responded with an error');
+      }
+
       const data = await response.json();
 
-      if (data.success) {
+      // Ekdam safe check taaki application crash na ho
+      if (data && (data.content || data.success)) {
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: data.content,
-            reasoning_details: data.reasoning_details
+            content: data.content || "Guru analysis done but content is empty.",
+            reasoning_details: data.reasoning_details || undefined
           },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: "⚠️ System busy. Please try again." }
         ]);
       }
     } catch (error) {
       console.error("Connection failed:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: "🚨 Connection Error: Backend server failed to respond." }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -66,11 +80,8 @@ export default function CyberDashboard() {
 
   return (
     <div className="flex flex-col h-screen bg-[#070a13] text-gray-100 font-mono relative overflow-hidden">
-      
-      {/* Background Subtle Grid Pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
       
-      {/* Top Professional Neon Header */}
       <header className="relative z-10 p-4 border-b border-cyan-500/30 bg-[#0b0f19]/80 backdrop-blur flex justify-between items-center shadow-[0_1px_20px_rgba(6,182,212,0.15)]">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-500/40 shadow-neon-cyan">
@@ -96,14 +107,12 @@ export default function CyberDashboard() {
         </div>
       </header>
 
-      {/* Main Chat Core Terminal Space */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10 max-w-5xl w-full mx-auto">
         {messages.filter(m => m.role !== 'system').map((msg, index) => (
           <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
             
-            {/* Thinking Dropdown (Neon Amber Theme) */}
             {msg.role === 'assistant' && msg.reasoning_details && (
-              <details className="w-full max-w-3xl mb-2 text-xs bg-amber-950/10 border border-amber-500/20 rounded-xl p-3 cursor-pointer transition-all hover:border-amber-500/40 group">
+              <details className="w-full max-w-3xl mb-2 text-xs bg-amber-950/10 border border-amber-500/20 rounded-xl p-3 cursor-pointer transition-all hover:border-amber-500/40">
                 <summary className="font-semibold text-amber-400 flex items-center space-x-2 outline-none select-none">
                   <Terminal className="w-3.5 h-3.5 animate-pulse text-amber-500" />
                   <span>Deep Reasoning Architecture Logs (Click to Inspect)</span>
@@ -114,7 +123,6 @@ export default function CyberDashboard() {
               </details>
             )}
 
-            {/* Response Message Bubble */}
             <div className={`p-5 rounded-2xl max-w-3xl shadow-xl text-sm leading-relaxed border tracking-wide font-sans ${
               msg.role === 'user' 
                 ? 'bg-gradient-to-br from-cyan-950/80 to-slate-900 border-cyan-500/40 text-cyan-100 rounded-tr-none shadow-[0_0_15px_rgba(6,182,212,0.1)]' 
@@ -122,13 +130,12 @@ export default function CyberDashboard() {
             }`}>
               <div className="flex items-start space-x-2">
                 {msg.role === 'assistant' && <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <p className="whitespace-pre-wrap">{msg.content || ""}</p>
               </div>
             </div>
           </div>
         ))}
         
-        {/* Loading Pulsing State */}
         {loading && (
           <div className="text-xs text-cyan-400 flex items-center space-x-2 bg-cyan-950/20 border border-cyan-500/30 p-3.5 rounded-xl w-60 shadow-neon-cyan">
             <Cpu className="w-4 h-4 animate-spin text-cyan-400" />
@@ -137,7 +144,6 @@ export default function CyberDashboard() {
         )}
       </div>
 
-      {/* Cyber Input Controls Footer */}
       <footer className="p-4 border-t border-slate-800/80 bg-[#090d1a]/90 backdrop-blur relative z-10">
         <form onSubmit={sendMessage} className="max-w-4xl mx-auto relative">
           <input
