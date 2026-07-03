@@ -12,6 +12,7 @@ interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   reasoning_details?: string;
+  timestamp?: string; // 🕒 WhatsApp style log integration mapping
 }
 
 interface AIModel {
@@ -115,6 +116,23 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // 📅 WHATSAPP STYLE DATE PARSER HELPER
+  const getWhatsAppDateLabel = (dateString?: string) => {
+    if (!dateString) return 'TODAY';
+    const msgDate = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (msgDate.toDateString() === today.toDateString()) {
+      return 'TODAY';
+    } else if (msgDate.toDateString() === yesterday.toDateString()) {
+      return 'YESTERDAY';
+    } else {
+      return msgDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+  };
+
   const initializeSession = async () => {
     let localSessionId = typeof window !== 'undefined' ? localStorage.getItem('ai_trade_guru_session') : null;
     
@@ -137,19 +155,27 @@ export default function CombinedDashboard() {
       
       const { data: history, error: historyError } = await supabase
         .from('chat_messages')
-        .select('role, content, reasoning_details')
+        .select('role, content, reasoning_details, created_at')
         .eq('session_id', localSessionId)
         .order('id', { ascending: true });
 
       if (!historyError && history && history.length > 0) {
-        setMessages(history as ChatMessage[]);
+        // Map created_at dynamically to timestamp state layer configuration safely
+        const formattedHistory = history.map((m: any) => ({
+          role: m.role,
+          content: m.content,
+          reasoning_details: m.reasoning_details,
+          timestamp: m.created_at || new Date().toISOString()
+        }));
+        setMessages(formattedHistory as ChatMessage[]);
       } else {
         const systemMessage: ChatMessage = {
           role: 'system',
-          content: 'Aap AI Trade Guru ke advanced behavioral coach hain. F&O traders ke behavioral mistakes ko deeply analyze kijiye.'
+          content: 'Aap AI Trade Guru ke advanced behavioral coach hain. F&O traders ke behavioral mistakes ko deeply analyze kijiye.',
+          timestamp: new Date().toISOString()
         };
         setMessages([systemMessage]);
-        await supabase.from('chat_messages').insert([{ session_id: localSessionId, ...systemMessage }]);
+        await supabase.from('chat_messages').insert([{ session_id: localSessionId, role: systemMessage.role, content: systemMessage.content }]);
       }
     }
   };
@@ -265,6 +291,7 @@ export default function CombinedDashboard() {
 
     let rawUserPayloadContent = input.trim();
     let dynamicDisplayContent = input.trim();
+    const currentISOString = new Date().toISOString();
 
     // Secure backend payload structural mapping layers
     if (attachedFile) {
@@ -276,7 +303,7 @@ export default function CombinedDashboard() {
       }
     }
 
-    const userMessage: ChatMessage = { role: 'user', content: dynamicDisplayContent };
+    const userMessage: ChatMessage = { role: 'user', content: dynamicDisplayContent, timestamp: currentISOString };
     const updatedMessagesForAI = [...messages, { role: 'user', content: rawUserPayloadContent } as ChatMessage];
     
     setMessages((prev) => [...prev, userMessage]);
@@ -320,7 +347,8 @@ export default function CombinedDashboard() {
       const aiMessage: ChatMessage = {
         role: 'assistant',
         content: String(parsedContent).trim(),
-        reasoning_details: parsedReasoning ? String(parsedReasoning).trim() : undefined
+        reasoning_details: parsedReasoning ? String(parsedReasoning).trim() : undefined,
+        timestamp: new Date().toISOString()
       };
 
       setMessages((prev) => [...prev, aiMessage]);
@@ -393,33 +421,67 @@ export default function CombinedDashboard() {
       {/* Central Chat Feed */}
       <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
         <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
-          {messages.filter(m => m && m.role !== 'system').map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[90%] sm:max-w-[85%] ${msg.role === 'user' ? (isDarkMode ? 'bg-cyan-950/60 border border-cyan-800 text-slate-100 rounded-2xl rounded-tr-sm shadow-md px-4 py-3 text-sm font-medium whitespace-pre-wrap' : 'bg-slate-900 text-white rounded-2xl rounded-tr-sm shadow-md px-4 py-3 text-sm font-medium whitespace-pre-wrap') : 'w-full'}`}>
-                {msg.role === 'user' ? (
-                  <p className="leading-relaxed font-sans">{msg.content}</p>
-                ) : (
-                  <div className={`border rounded-2xl p-5 sm:p-6 transition-all shadow-sm ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-white border-slate-200/70'}`}>
-                    {msg.reasoning_details && (
-                      <details className={`mb-4 text-xs border rounded-xl overflow-hidden group ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200/60'}`}>
-                        <summary className={`cursor-pointer font-semibold p-3 flex items-center justify-between select-none transition-colors ${isDarkMode ? 'text-amber-400' : 'text-slate-500'}`}>
-                          <span className="flex items-center gap-1.5 font-mono text-[11px]"><Cpu size={13} /> Process Step Engine Mapping</span>
-                          <ChevronRight size={14} />
-                        </summary>
-                        <div className={`px-4 pb-4 pt-2 font-mono text-[11px] border-t whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto ${isDarkMode ? 'text-slate-400 border-slate-800 bg-[#0f1626]' : 'text-slate-500 border-slate-100 bg-slate-50/50'}`}>
-                          {msg.reasoning_details}
-                        </div>
-                      </details>
-                    )}
-                    <div className="flex items-start gap-3">
-                      <div className={`p-1.5 rounded-md shrink-0 mt-0.5 ${isDarkMode ? 'bg-cyan-950/40 text-cyan-400' : 'bg-blue-50 text-blue-600'}`}><Sparkles size={14} /></div>
-                      <div className="flex-1 w-full"><ProfessionalMarkdown text={msg.content} isDark={isDarkMode} /></div>
-                    </div>
+          {messages.filter(m => m && m.role !== 'system').map((msg, i) => {
+            // 📅 WhatsApp Style Date Header Trigger Condition Check
+            const currentMsgDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : new Date().toDateString();
+            const filteredValidMessages = messages.filter(m => m && m.role !== 'system');
+            const mapIndexInFiltered = filteredValidMessages.indexOf(msg);
+            
+            const prevMsg = mapIndexInFiltered > 0 ? filteredValidMessages[mapIndexInFiltered - 1] : null;
+            const prevMsgDate = prevMsg && prevMsg.timestamp ? new Date(prevMsg.timestamp).toDateString() : null;
+            
+            const showWhatsAppDateLine = mapIndexInFiltered === 0 || currentMsgDate !== prevMsgDate;
+
+            return (
+              <div key={i} className="w-full flex flex-col">
+                {/* 📅 WHATSAPP STYLE DATE BAR COMPONENT */}
+                {showWhatsAppDateLine && (
+                  <div className="flex justify-center my-4 select-none animate-fadeIn">
+                    <span className={`text-[10px] font-bold px-3 py-1 rounded-md shadow-sm tracking-wider uppercase border font-mono ${
+                      isDarkMode ? 'bg-slate-900/90 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    }`}>
+                      {getWhatsAppDateLabel(msg.timestamp)}
+                    </span>
                   </div>
                 )}
+
+                <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-1`}>
+                  <div className={`max-w-[90%] sm:max-w-[85%] relative flex flex-col ${msg.role === 'user' ? (isDarkMode ? 'bg-cyan-950/60 border border-cyan-800 text-slate-100 rounded-2xl rounded-tr-sm shadow-md px-4 pt-3 pb-5 text-sm font-medium whitespace-pre-wrap' : 'bg-slate-900 text-white rounded-2xl rounded-tr-sm shadow-md px-4 pt-3 pb-5 text-sm font-medium whitespace-pre-wrap') : 'w-full'}`}>
+                    {msg.role === 'user' ? (
+                      <p className="leading-relaxed font-sans">{msg.content}</p>
+                    ) : (
+                      <div className={`border rounded-2xl p-5 sm:p-6 pb-7 relative transition-all shadow-sm ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-white border-slate-200/70'}`}>
+                        {msg.reasoning_details && (
+                          <details className={`mb-4 text-xs border rounded-xl overflow-hidden group ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200/60'}`}>
+                            <summary className={`cursor-pointer font-semibold p-3 flex items-center justify-between select-none transition-colors ${isDarkMode ? 'text-amber-400' : 'text-slate-500'}`}>
+                              <span className="flex items-center gap-1.5 font-mono text-[11px]"><Cpu size={13} /> Process Step Engine Mapping</span>
+                              <ChevronRight size={14} />
+                            </summary>
+                            <div className={`px-4 pb-4 pt-2 font-mono text-[11px] border-t whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto ${isDarkMode ? 'text-slate-400 border-slate-800 bg-[#0f1626]' : 'text-slate-500 border-slate-100 bg-slate-50/50'}`}>
+                              {msg.reasoning_details}
+                            </div>
+                          </details>
+                        )}
+                        <div className="flex items-start gap-3">
+                          <div className={`p-1.5 rounded-md shrink-0 mt-0.5 ${isDarkMode ? 'bg-cyan-950/40 text-cyan-400' : 'bg-blue-50 text-blue-600'}`}><Sparkles size={14} /></div>
+                          <div className="flex-1 w-full"><ProfessionalMarkdown text={msg.content} isDark={isDarkMode} /></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🕒 WHATSAPP STYLE SUBTLE TIMING Display OVERLAY */}
+                    <span className={`absolute bottom-1.5 right-3.5 text-[9px] font-mono select-none ${
+                      msg.role === 'user' 
+                        ? (isDarkMode ? 'text-cyan-400/70' : 'text-slate-400') 
+                        : (isDarkMode ? 'text-slate-500' : 'text-slate-400')
+                    }`}>
+                      {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {uploadingFile && (
             <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-64 font-mono border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-amber-400' : 'bg-white border-slate-200 text-slate-500'}`}>
