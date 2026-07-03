@@ -15,12 +15,13 @@ interface AIModel {
   badge: string;
 }
 
+// 🌐 Premium Model Mapping with VIP Short Identifiers (Meta, Hermes Pro & Pro Integrated)
 const AVAILABLE_MODELS: AIModel[] = [
   { name: 'Gemini Pro', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
-  { name: 'Qwen lite', id: 'qwen/qwen3-next-80b-a3b-instruct:free', badge: 'ANALYTICS' },
+  { name: 'Meta Pro', id: 'meta-llama/llama-3.3-70b-instruct:free', badge: 'FAST CHAT' },
   { name: 'GPT Pro', id: 'openai/gpt-oss-120b:free', badge: 'INTELLLECT' },
-  { name: 'Qwen Pro', id: 'qwen/qwen3-coder:free', badge: 'LOGS' },
-  { name: 'Nvidia', id: 'nvidia/nemotron-3-ultra-550b-a55b:free', badge: 'STRATEGY' }
+  { name: 'Hermes Pro', id: 'nousresearch/hermes-3-llama-3.1-405b:free', badge: 'DEEP THINK' },
+  { name: 'Pro', id: 'nvidia/nemotron-3-ultra-550b-a55b:free', badge: 'STRATEGY' }
 ];
 
 function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean }) {
@@ -76,7 +77,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
 export default function CombinedDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // Controls modern custom select drawer
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'system',
@@ -90,7 +91,6 @@ export default function CombinedDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close custom drop-up popover when user clicks anywhere outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -148,7 +148,7 @@ export default function CombinedDashboard() {
           alert('Could not extract text from this PDF.');
         }
       } catch (err) {
-        console.error('PDF parsing matrix failure:', err);
+        console.error('PDF parsing failure:', err);
       } finally {
         setUploadingPdf(false);
       }
@@ -157,7 +157,7 @@ export default function CombinedDashboard() {
       reader.onload = (event) => {
         const text = event.target?.result;
         if (typeof text === 'string') {
-          setInput((prev) => `${prev}\n[File Context Frame: ${file.name}]\n${text}`.trim());
+          setInput((prev) => `${prev}\n[File Content Frame: ${file.name}]\n${text}`.trim());
         }
       };
       reader.readAsText(file);
@@ -189,7 +189,7 @@ export default function CombinedDashboard() {
         }),
       });
 
-      if (!response.ok) throw new Error('Gateway route pipeline synchronization failure');
+      if (!response.ok) throw new Error('Gateway route failure');
 
       const data = await response.json();
       let parsedContent = "";
@@ -215,10 +215,6 @@ export default function CombinedDashboard() {
 
     } catch (error) {
       console.error(error);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: "Telemetry processing reset sequence activated. Please re-submit raw metrics logs." }
-      ]);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
       setLoading(false);
@@ -235,15 +231,8 @@ export default function CombinedDashboard() {
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
       <style jsx global>{`
-        html, body {
-          margin: 0;
-          padding: 0;
-          height: 100%;
-          font-family: 'Plus Jakarta Sans', sans-serif !important;
-        }
-        .font-mono-premium {
-          font-family: 'JetBrains Mono', monospace !important;
-        }
+        html, body { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+        .font-mono-premium { font-family: 'JetBrains Mono', monospace !important; }
       `}</style>
 
       {/* Header Bar */}
@@ -255,9 +244,7 @@ export default function CombinedDashboard() {
             <BarChart3 size={18} className={isDarkMode ? 'text-cyan-400' : 'text-white'} />
           </div>
           <div>
-            <h1 className={`text-md font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              AI TRADE GURU
-            </h1>
+            <h1 className={`text-md font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>AI TRADE GURU</h1>
             <p className={`text-[9px] font-bold tracking-widest uppercase mt-0.5 ${isDarkMode ? 'text-cyan-400/80' : 'text-slate-400'}`}>
               Institutional Platform • <span className="text-blue-500 font-extrabold">{selectedModel.name}</span> Active
             </p>
@@ -275,7 +262,7 @@ export default function CombinedDashboard() {
         </button>
       </header>
 
-      {/* Central Chat Feed Viewport */}
+      {/* Central Chat Feed */}
       <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
         <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
           {messages.filter(m => m && m.role !== 'system').map((msg, i) => (
@@ -322,19 +309,18 @@ export default function CombinedDashboard() {
         </div>
       </div>
 
-      {/* 🛠️ Re-engineered Compact Footer (Fixed Alignment, Large Send & Popover Menu) */}
+      {/* 🛠️ Compact Professional Footer Control Panel */}
       <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
       }`}>
         <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
           
-          {/* Dropdown Row Replaced with Modern Custom Popover Trigger */}
+          {/* Modern Floating Popover Trigger */}
           <div className="flex items-center justify-between gap-2 px-1 relative" ref={menuRef}>
             <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400 font-mono-premium' : 'text-slate-500'}`}>
               Engine Protocol:
             </span>
             
-            {/* Custom Popover Button Element */}
             <div className="relative">
               <button
                 type="button"
@@ -349,9 +335,9 @@ export default function CombinedDashboard() {
                 <ChevronUp size={12} className={`transform transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* 🔮 Modern Glassmorphic Popover Drop-up Menu */}
+              {/* 🔮 Modern Drop-up Popover Drawer with Golden VIP Check Icons */}
               {isMenuOpen && (
-                <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md transition-all z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 ${
+                <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md transition-all z-50 ${
                   isDarkMode 
                     ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' 
                     : 'bg-white/95 border-slate-200 text-slate-800'
@@ -369,12 +355,13 @@ export default function CombinedDashboard() {
                           }}
                           className={`w-full text-left text-xs font-semibold px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${
                             isSelected 
-                              ? (isDarkMode ? 'bg-cyan-500/10 text-cyan-400 font-bold' : 'bg-blue-50 text-blue-600 font-bold') 
+                              ? (isDarkMode ? 'bg-slate-800/80 text-cyan-400 font-bold' : 'bg-slate-50 text-blue-600 font-bold') 
                               : (isDarkMode ? 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900')
                           }`}
                         >
                           <span>{model.name}</span>
-                          {isSelected && <Check size={12} className="shrink-0 stroke-[2.5]" />}
+                          {/* 🌟 Pure Gold VIP Check Button Added */}
+                          {isSelected && <Check size={13} className="shrink-0 stroke-[3] text-[#d4af37]" />}
                         </button>
                       );
                     })}
@@ -384,7 +371,7 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
-          {/* Action Row */}
+          {/* Action Row Bar */}
           <div className="flex items-center gap-2">
             <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.txt,.csv,.json,.log" />
             
@@ -412,12 +399,12 @@ export default function CombinedDashboard() {
                 }`}
               />
               
-              {/* Giant Highly Accessible Send Button */}
+              {/* Giant Standard Round Touch-Friendly Send Button */}
               <button 
                 type="button"
                 disabled={loading || !input.trim() || uploadingPdf}
                 onClick={sendMessage}
-                className={`absolute right-2 w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition-all flex items-center justify-center shadow-md ${
+                className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${
                   isDarkMode 
                     ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' 
                     : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
