@@ -9,7 +9,21 @@ interface ChatMessage {
   reasoning_details?: string;
 }
 
-// 💎 Dynamic Formatter Engine (Adapts styling based on Dark/Light mode)
+interface AIModel {
+  name: string;
+  id: string;
+  badge: string;
+}
+
+// 💎 Curated Best Premium Models Choice Mapping
+const AVAILABLE_MODELS: AIModel[] = [
+  { name: 'Gemma-4 Reasoning 26B', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
+  { name: 'Qwen-3 Next 80B Instruct', id: 'qwen/qwen3-next-80b-instruct:free', badge: 'ANALYTICS' },
+  { name: 'OpenAI GPT-OSS 120B', id: 'openai/gpt-oss-120b:free', badge: 'HIGH INTELLECT' },
+  { name: 'Qwen-3 Coder 480B', id: 'qwen/qwen3-coder-480b-a35b:free', badge: 'DATA PROCESSING' },
+  { name: 'NVIDIA Nemotron 3 Ultra', id: 'nvidia/nemotron-3-ultra:free', badge: 'STRATEGY CRITIC' }
+];
+
 function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean }) {
   if (!text) return null;
   const lines = text.split('\n');
@@ -20,7 +34,6 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
         let cleanLine = line.trim();
         if (!cleanLine) return <div key={lIdx} className="h-1.5" />;
 
-        // Subheadings Handling
         if (cleanLine.startsWith('###')) {
           return (
             <h3 key={lIdx} className={`text-[13px] font-bold mt-5 mb-2 tracking-wider uppercase border-l-2 pl-2.5 ${
@@ -31,7 +44,6 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
           );
         }
 
-        // Bullet Points Handling
         const isBullet = cleanLine.startsWith('* ') || cleanLine.startsWith('- ') || cleanLine.startsWith('• ');
         if (isBullet) {
           cleanLine = cleanLine.replace(/^([\*\-\•]\s*)/, '');
@@ -42,9 +54,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
           if (part.startsWith('**') && part.endsWith('**')) {
             return (
               <strong key={pIdx} className={`font-bold rounded text-[13px] inline-block tracking-tight px-1.5 py-0.5 mx-0.5 ${
-                isDark 
-                  ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' 
-                  : 'text-slate-950 bg-slate-100'
+                isDark ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' : 'text-slate-950 bg-slate-100'
               }`}>
                 {part.slice(2, -2)}
               </strong>
@@ -66,6 +76,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
 
 export default function CombinedDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'system',
@@ -110,7 +121,8 @@ export default function CombinedDashboard() {
             role: msg.role || "user",
             content: msg.content || "",
             reasoning_details: msg.reasoning_details || null
-          }))
+          })),
+          model_name: selectedModel.id // Live parameter forwarding to backend
         }),
       });
 
@@ -145,6 +157,7 @@ export default function CombinedDashboard() {
         { role: 'assistant', content: "Telemetry synchronization reset. Please submit parameters again." }
       ]);
     } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setLoading(false);
     }
   };
@@ -186,24 +199,13 @@ export default function CombinedDashboard() {
             <h1 className={`text-md font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               AI TRADE GURU
             </h1>
-            <p className={`text-[10px] font-bold tracking-widest uppercase mt-0.5 ${isDarkMode ? 'text-cyan-400/80' : 'text-slate-400'}`}>
-              Institutional Analytics Platform
+            <p className={`text-[9px] font-bold tracking-widest uppercase mt-0.5 ${isDarkMode ? 'text-cyan-400/80' : 'text-slate-400'}`}>
+              Institutional Platform • <span className="text-blue-500 font-extrabold">{selectedModel.name.split(' ')[0]}</span> Active
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Active Mode Tag */}
-          <div className={`hidden sm:flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1 rounded-full border transition-colors ${
-            isDarkMode 
-              ? 'text-cyan-400 bg-cyan-950/40 border-cyan-800/60' 
-              : 'text-emerald-600 bg-emerald-50 border-emerald-200/60'
-          }`}>
-            <ShieldCheck size={13} /> 
-            <span>Secure Engine Active</span>
-          </div>
-
-          {/* 🌓 Theme Toggle Button */}
           <button
             type="button"
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -277,71 +279,96 @@ export default function CombinedDashboard() {
           ))}
 
           {loading && (
-            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-56 font-mono-premium border ${
+            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-64 font-mono-premium border ${
               isDarkMode ? 'bg-slate-900 border-slate-800 text-cyan-400' : 'bg-white border-slate-200 text-slate-500'
             }`}>
               <Cpu size={14} className={`animate-spin ${isDarkMode ? 'text-cyan-400' : 'text-blue-600'}`} />
-              <span className="tracking-wide animate-pulse">PROCESSING TELEMETRY...</span>
+              <span className="tracking-wide animate-pulse">PROCESSING WITH {selectedModel.name.toUpperCase()}...</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* 🛠️ Highly Optimized & Aligned Input Center */}
-      <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
-        isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-2px_10px_rgba(0,0,0,0.01)]'
+      {/* 🛠️ Re-engineered Professional Footer Core Input Panel */}
+      <footer className={`p-4 border-t relative z-10 transition-colors ${
+        isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-md'
       }`}>
-        <div className="max-w-3xl mx-auto flex items-center gap-2 bg-transparent">
+        <div className="max-w-3xl mx-auto flex flex-col gap-3">
           
-          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".txt,.csv,.json,.log" />
-          
-          {/* Attachment Button Perfectly Proportional */}
-          <button 
-            type="button" 
-            onClick={() => fileInputRef.current?.click()} 
-            className={`w-11 h-11 rounded-xl border transition-all shrink-0 flex items-center justify-center ${
-              isDarkMode 
-                ? 'bg-[#121b2e] border-slate-700 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40' 
-                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-            title="Attach Log Data"
-          >
-            <Paperclip size={18} />
-          </button>
+          {/* 🎛️ Row 1: Premium Model Dropdown Selector Layout Area */}
+          <div className="flex items-center justify-between gap-4 px-1">
+            <span className={`text-[11px] font-bold tracking-wider uppercase ${isDarkMode ? 'text-slate-400 font-mono-premium' : 'text-slate-500'}`}>
+              Select Engine Protocol:
+            </span>
+            <div className="relative">
+              <select
+                value={selectedModel.id}
+                onChange={(e) => {
+                  const found = AVAILABLE_MODELS.find(m => m.id === e.target.value);
+                  if (found) setSelectedModel(found);
+                }}
+                className={`text-xs font-bold py-1.5 pl-3 pr-8 rounded-lg border appearance-none cursor-pointer focus:outline-none transition-all max-w-[220px] sm:max-w-xs truncate ${
+                  isDarkMode 
+                    ? 'bg-[#121b2e] border-slate-700 text-cyan-400 focus:border-cyan-500' 
+                    : 'bg-slate-50 border-slate-300 text-slate-800 focus:border-blue-500'
+                }`}
+                style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%2322d3ee' : '%23475569'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`, backgroundSize: '12px', backgroundPosition: 'right 8px center', backgroundRepeat: 'no-repeat' }}
+              >
+                {AVAILABLE_MODELS.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} [{model.badge}]
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-          {/* Combined Flex Container to Fix Vertical Alignment */}
-          <div className="relative flex-1 flex items-center">
-            <textarea 
-              rows={1}
-              value={input} 
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe your trades or paste execution logs..." 
-              className={`w-full border rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${
-                isDarkMode 
-                  ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' 
-                  : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
-              }`}
-              style={{ display: 'block', boxSizing: 'border-box' }}
-            />
+          {/* ✍px Row 2: Aligned Input Center Actions Container */}
+          <div className="flex items-center gap-2">
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".txt,.csv,.json,.log" />
             
-            {/* Submit Button Centered Vertically inside Input Row */}
+            {/* Attachment Button Perfectly Proportional */}
             <button 
-              type="button"
-              disabled={loading || !input.trim()}
-              onClick={sendMessage}
-              className={`absolute right-1.5 w-8 h-8 rounded-lg transition-all flex items-center justify-center ${
+              type="button" 
+              onClick={() => fileInputRef.current?.click()} 
+              className={`w-11 h-11 rounded-xl border transition-all shrink-0 flex items-center justify-center ${
                 isDarkMode 
-                  ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' 
-                  : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
+                  ? 'bg-[#121b2e] border-slate-700 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40' 
+                  : 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              <Send size={13} className="stroke-[2.5]" />
+              <Paperclip size={18} />
             </button>
+
+            <div className="relative flex-1 flex items-center">
+              <textarea 
+                rows={1}
+                value={input} 
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={`Query data via ${selectedModel.name.split(' ')[0]}...`} 
+                className={`w-full border rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${
+                  isDarkMode 
+                    ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
+                }`}
+              />
+              
+              {/* Submit Button Centered Vertically inside Input Row */}
+              <button 
+                type="button"
+                disabled={loading || !input.trim()}
+                onClick={sendMessage}
+                className={`absolute right-1.5 w-8 h-8 rounded-lg transition-all flex items-center justify-center ${
+                  isDarkMode ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'bg-slate-900 text-white hover:bg-slate-800'
+                } disabled:opacity-20`}
+              >
+                <Send size={13} className="stroke-[2.5]" />
+              </button>
+            </div>
           </div>
 
         </div>
       </footer>
-
     </div>
   );
 }
