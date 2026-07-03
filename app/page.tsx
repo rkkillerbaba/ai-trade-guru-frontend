@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, ChevronRight, BarChart3, Sun, Moon, Cpu, Sparkles, FileText, ChevronUp, Check, RefreshCw } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
-// 📡 Supabase Client Initialization from Vercel Environment Variables
+// 📡 Supabase Client Initialization safely checked
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -21,7 +21,6 @@ interface AIModel {
   badge: string;
 }
 
-// 🌐 Strictly Synced Stable Premium Free Cluster Mapping
 const AVAILABLE_MODELS: AIModel[] = [
   { name: 'Gemini Pro', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
   { name: 'GPT Pro', id: 'openai/gpt-oss-120b:free', badge: 'INTELLLECT' },
@@ -94,12 +93,10 @@ export default function CombinedDashboard() {
   const menuRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // 🔄 Auto Scroll System
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Click Outside Popover Controller
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -110,37 +107,9 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 📝 Load External Parsing Scripts & Sync Cloud Handlers
-  useEffect(() => {
-    // 1. PDF Matrix Parser Engine Injection
-    const pdfScript = document.createElement('script');
-    pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
-    pdfScript.async = true;
-    document.body.appendChild(pdfScript);
-    pdfScript.onload = () => {
-      if (window && (window as any).pdfjsLib) {
-        (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-      }
-    };
-
-    // 2. SheetJS Tabular Excel Module Injection
-    const excelScript = document.createElement('script');
-    excelScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    excelScript.async = true;
-    document.body.appendChild(excelScript);
-
-    // 💾 Initialize or Load Cloud Sessions
-    initializeSession();
-
-    return () => {
-      document.body.removeChild(pdfScript);
-      document.body.removeChild(excelScript);
-    };
-  }, []);
-
-  // 🔑 Fetch Existing Session or Construct a New Identity Block
+  // 💾 Initialize Session Function definition placed before useEffect to satisfy Next builds
   const initializeSession = async () => {
-    let localSessionId = localStorage.getItem('ai_trade_guru_session');
+    let localSessionId = typeof window !== 'undefined' ? localStorage.getItem('ai_trade_guru_session') : null;
     
     if (!localSessionId) {
       const { data, error } = await supabase
@@ -150,14 +119,15 @@ export default function CombinedDashboard() {
       
       if (!error && data && data[0]) {
         localSessionId = data[0].id;
-        localStorage.setItem('ai_trade_guru_session', localSessionId!);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('ai_trade_guru_session', localSessionId!);
+        }
       }
     }
 
     if (localSessionId) {
       setSessionId(localSessionId);
       
-      // Pull history strictly from Supabase Database
       const { data: history, error: historyError } = await supabase
         .from('chat_messages')
         .select('role, content, reasoning_details')
@@ -177,16 +147,37 @@ export default function CombinedDashboard() {
     }
   };
 
-  // 🗑️ Hard Reset Session Command Trigger
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const pdfScript = document.createElement('script');
+      pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
+      pdfScript.async = true;
+      document.body.appendChild(pdfScript);
+      pdfScript.onload = () => {
+        if (window && (window as any).pdfjsLib) {
+          (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        }
+      };
+
+      const excelScript = document.createElement('script');
+      excelScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      excelScript.async = true;
+      document.body.appendChild(excelScript);
+    }
+
+    initializeSession();
+  }, []);
+
   const clearChatSession = async () => {
     if (confirm("Kya aap sach mein chat history mita kar naya session start karna chahte hain?")) {
-      localStorage.removeItem('ai_trade_guru_session');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ai_trade_guru_session');
+      }
       setMessages([]);
       await initializeSession();
     }
   };
 
-  // 🚀 SUPABASE CLOUD FILE UPLOAD PIPELINE
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !sessionId) return;
@@ -198,51 +189,45 @@ export default function CombinedDashboard() {
     try {
       const uniqueFileName = `${Date.now()}_${file.name}`;
 
-      // 1. Pipeline binary stream to Supabase Storage Bucket
-      const { data: storageData, error: storageError } = await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from('trader-logs')
         .upload(`uploads/${uniqueFileName}`, file);
 
       if (storageError) throw storageError;
 
-      // 2. Fetch public access URL reference path mapping
       const { data: urlData } = supabase.storage
         .from('trader-logs')
         .getPublicUrl(`uploads/${uniqueFileName}`);
 
       const publicFileUrl = urlData.publicUrl;
 
-      // 3. Register meta metadata record to Supabase DB relational structure
       await supabase
         .from('user_uploads')
         .insert([
           { session_id: sessionId, file_name: file.name, file_url: publicFileUrl, file_type: fileExtension }
         ]);
 
-      // 4. Client Side Fallback Context Read for Realtime Appending Pass
       if (['xlsx', 'xls', 'csv'].includes(fileExtension || '')) {
         const XLSX = (window as any).XLSX;
         if (XLSX) {
           const d = await file.arrayBuffer();
           const wb = XLSX.read(d, { type: 'array' });
           let txt = '';
-          wb.SheetNames.forEach((n) => { txt += XLSX.utils.sheet_to_txt(wb.Sheets[n]); });
+          wb.SheetNames.forEach((n: string) => { txt += XLSX.utils.sheet_to_txt(wb.Sheets[n]); });
           setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${txt.trim()}`.trim());
         }
-      } else if (fileExtension === 'pdf' || file.type === 'application/pdf') {
+      } else if (fileExtension === 'pdf' && (window as any).pdfjsLib) {
         const pdfjsLib = (window as any).pdfjsLib;
-        if (pdfjsLib) {
-          const arrayBuffer = await file.arrayBuffer();
-          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-          const pdf = await loadingTask.promise;
-          let compiledText = '';
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            compiledText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
-          }
-          setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${compiledText.trim()}`.trim());
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        let compiledText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          compiledText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
         }
+        setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${compiledText.trim()}`.trim());
       } else {
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -255,7 +240,7 @@ export default function CombinedDashboard() {
 
     } catch (err: any) {
       console.error(err);
-      alert(`Upload Failed: Check if storage bucket "trader-logs" is set to Public. ${err.message}`);
+      alert(`Upload Matrix Sync Check: ${err.message}`);
     } finally {
       setUploadingFile(false);
       setUploadStatus('');
@@ -274,7 +259,6 @@ export default function CombinedDashboard() {
     setInput('');
     setLoading(true);
 
-    // Instant save user message tracking to Supabase DB
     await supabase.from('chat_messages').insert([
       { session_id: sessionId, role: userMessage.role, content: userMessage.content }
     ]);
@@ -316,7 +300,6 @@ export default function CombinedDashboard() {
 
       setMessages((prev) => [...prev, aiMessage]);
 
-      // Instant save AI model response matrix tracking to Supabase DB
       await supabase.from('chat_messages').insert([
         { 
           session_id: sessionId, 
@@ -335,17 +318,12 @@ export default function CombinedDashboard() {
 
   return (
     <div className={`flex flex-col h-screen antialiased transition-colors duration-200 ${
-      isDarkMode ? 'bg-[#0b0f19] text-slate-100 font-sans' : 'bg-slate-50/60 text-slate-800 font-sans'
+      isDarkMode ? 'bg-[#0b0f19] text-slate-100' : 'bg-slate-50/60 text-slate-800'
     }`}>
       
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-
-      <style jsx global>{`
-        html, body { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', sans-serif !important; }
-        .font-mono-premium { font-family: 'JetBrains Mono', monospace !important; }
-      `}</style>
 
       {/* Header Bar */}
       <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-10 border-b transition-colors ${
@@ -356,7 +334,7 @@ export default function CombinedDashboard() {
             <BarChart3 size={18} className={isDarkMode ? 'text-cyan-400' : 'text-white'} />
           </div>
           <div>
-            <h1 className={`text-md font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>AI TRADE GURU</h1>
+            <h1 className="text-md font-extrabold tracking-tight">AI TRADE GURU</h1>
             <p className={`text-[9px] font-bold tracking-widest uppercase mt-0.5 ${isDarkMode ? 'text-cyan-400/80' : 'text-slate-400'}`}>
               Cloud Matrix Storage • <span className="text-blue-500 font-extrabold">{selectedModel.name}</span> Active
             </p>
@@ -364,7 +342,6 @@ export default function CombinedDashboard() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 🗑️ Clear / Reset Session Button Layout */}
           <button
             type="button"
             onClick={clearChatSession}
@@ -401,10 +378,10 @@ export default function CombinedDashboard() {
                     {msg.reasoning_details && (
                       <details className={`mb-4 text-xs border rounded-xl overflow-hidden group ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200/60'}`}>
                         <summary className={`cursor-pointer font-semibold p-3 flex items-center justify-between select-none transition-colors ${isDarkMode ? 'text-amber-400' : 'text-slate-500'}`}>
-                          <span className="flex items-center gap-1.5 font-mono-premium text-[11px]"><Cpu size={13} /> Process Step Engine Mapping</span>
+                          <span className="flex items-center gap-1.5 font-mono text-[11px]"><Cpu size={13} /> Process Step Engine Mapping</span>
                           <ChevronRight size={14} />
                         </summary>
-                        <div className={`px-4 pb-4 pt-2 font-mono-premium text-[11px] border-t whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto ${isDarkMode ? 'text-slate-400 border-slate-800 bg-[#0f1626]' : 'text-slate-500 border-slate-100 bg-slate-50/50'}`}>
+                        <div className={`px-4 pb-4 pt-2 font-mono text-[11px] border-t whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto ${isDarkMode ? 'text-slate-400 border-slate-800 bg-[#0f1626]' : 'text-slate-500 border-slate-100 bg-slate-50/50'}`}>
                           {msg.reasoning_details}
                         </div>
                       </details>
@@ -420,14 +397,14 @@ export default function CombinedDashboard() {
           ))}
 
           {uploadingFile && (
-            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-64 font-mono-premium border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-amber-400' : 'bg-white border-slate-200 text-slate-500'}`}>
+            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-64 font-mono border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-amber-400' : 'bg-white border-slate-200 text-slate-500'}`}>
               <FileText size={14} className="animate-bounce text-amber-500" />
               <span className="tracking-wide animate-pulse text-[10px] uppercase">{uploadStatus}</span>
             </div>
           )}
 
           {loading && (
-            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-56 font-mono-premium border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-cyan-400' : 'bg-white border-slate-200 text-slate-500'}`}>
+            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-56 font-mono border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-cyan-400' : 'bg-white border-slate-200 text-slate-500'}`}>
               <Cpu size={14} className="animate-spin" />
               <span className="tracking-wide animate-pulse">RUNNING {selectedModel.name.toUpperCase()}...</span>
             </div>
@@ -436,15 +413,14 @@ export default function CombinedDashboard() {
         </div>
       </div>
 
-      {/* 🛠️ Footer Control Panel with Gold VIP Drop-Up Menu Check */}
+      {/* 🛠️ Footer Control Panel */}
       <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
       }`}>
         <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
           
-          {/* Modern Floating Popover Trigger */}
           <div className="flex items-center justify-between gap-2 px-1 relative" ref={menuRef}>
-            <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400 font-mono-premium' : 'text-slate-500'}`}>
+            <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400 font-mono' : 'text-slate-500'}`}>
               Engine Protocol:
             </span>
             
@@ -462,7 +438,6 @@ export default function CombinedDashboard() {
                 <ChevronUp size={12} className={`transform transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* 🔮 Drop-up Popover Drawer with Golden VIP Check Icons */}
               {isMenuOpen && (
                 <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md transition-all z-50 ${
                   isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'
@@ -485,7 +460,6 @@ export default function CombinedDashboard() {
                           }`}
                         >
                           <span>{model.name}</span>
-                          {/* Luxury VIP Gold Check Icon */}
                           {isSelected && <Check size={13} className="shrink-0 stroke-[3] text-[#d4af37]" />}
                         </button>
                       );
@@ -496,7 +470,6 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
-          {/* Action Input Bar Row */}
           <div className="flex items-center gap-2">
             <input 
               type="file" 
@@ -506,7 +479,6 @@ export default function CombinedDashboard() {
               accept=".pdf,.xlsx,.xls,.csv,.txt,.log,.json,.docx" 
             />
             
-            {/* Attachment Trigger */}
             <button 
               type="button" 
               onClick={() => fileInputRef.current?.click()} 
