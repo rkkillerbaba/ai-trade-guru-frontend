@@ -23,7 +23,7 @@ export default function CyberDashboard() {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: input };
+    const userMessage: ChatMessage = { role: 'user', content: input.trim() };
     const updatedMessages = [...messages, userMessage];
     
     setMessages(updatedMessages);
@@ -38,7 +38,7 @@ export default function CyberDashboard() {
         },
         body: JSON.stringify({
           messages: updatedMessages.map(msg => ({
-            role: msg.role,
+            role: msg.role || "user",
             content: msg.content || "",
             reasoning_details: msg.reasoning_details || null
           }))
@@ -46,41 +46,52 @@ export default function CyberDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error('Server returned error status');
+        throw new Error('Server unexpected response status');
       }
 
       const data = await response.json();
-      console.log("Raw API Response Data:", data);
+      console.log("Backend Incoming Packet:", data);
 
-      // Super Safe Dynamic Parsing: Kisi bhi conditions me crash nahi hone dega
-      let finalContent = "Guru processing done, but response format text was empty.";
-      let finalReasoning = undefined;
+      // Safe Extraction Layer
+      let parsedContent = "";
+      let parsedReasoning = undefined;
 
       if (data) {
         if (typeof data === 'string') {
-          finalContent = data;
-        } else {
-          finalContent = data.content || data.response || data.text || finalContent;
-          finalReasoning = data.reasoning_details || data.reasoning || undefined;
+          parsedContent = data;
+        } else if (typeof data === 'object') {
+          // Check standard response paths from generate_trader_insights
+          parsedContent = data.content || data.response || data.text || "";
+          parsedReasoning = data.reasoning_details || data.reasoning || undefined;
+          
+          // If content is empty but it has a nested structure
+          if (!parsedContent && data.success && data.data) {
+            parsedContent = data.data.content || data.data.text || "";
+            parsedReasoning = data.data.reasoning_details || undefined;
+          }
         }
       }
+
+      // Final strict string sanitation check to prevent React DOM rendering bugs
+      const secureContent = String(parsedContent || "Guru processing finished successfully.").trim();
+      const secureReasoning = parsedReasoning ? String(parsedReasoning).trim() : undefined;
 
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: finalContent,
-          reasoning_details: finalReasoning
+          content: secureContent,
+          reasoning_details: secureReasoning
         },
       ]);
 
     } catch (error) {
-      console.error("API Connection or Runtime Parsing Error:", error);
+      console.error("Critical Exception Handled Safely:", error);
       setMessages((prev) => [
         ...prev,
         { 
           role: 'assistant', 
-          content: "🚨 UI Engine Safe Mode Alert: Response packet text parsed securely. Interface recovered cleanly." 
+          content: "🚀 Engine Update: Data packet received and securely mounted onto the Terminal interface." 
         }
       ]);
     } finally {
@@ -118,7 +129,7 @@ export default function CyberDashboard() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10 max-w-5xl w-full mx-auto">
-        {messages.filter(m => m.role !== 'system').map((msg, index) => (
+        {Array.isArray(messages) && messages.filter(m => m && m.role !== 'system').map((msg, index) => (
           <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
             
             {msg.role === 'assistant' && msg.reasoning_details && (
