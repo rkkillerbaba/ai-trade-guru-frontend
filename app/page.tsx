@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Terminal, ShieldCheck, Cpu, Send, Sparkles, TrendingUp, Paperclip, FileText } from 'lucide-react';
+import { Send, Paperclip, ChevronRight, BarChart3, ShieldCheck, Cpu, Sparkles } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -9,7 +9,54 @@ interface ChatMessage {
   reasoning_details?: string;
 }
 
-export default function CyberDashboard() {
+// 💎 Ultra-Premium Institutional Text Formatter Engine
+function ProfessionalMarkdown({ text }: { text: string }) {
+  if (!text) return null;
+  const lines = text.split('\n');
+  
+  return (
+    <div className="space-y-3.5 text-slate-700 leading-relaxed font-sans antialiased">
+      {lines.map((line, lIdx) => {
+        const cleanLine = line.trim();
+        if (!cleanLine) return <div key={lIdx} className="h-1.5" />;
+
+        // Subheadings (###) Ko Clean Premium Look Dena
+        if (cleanLine.startsWith('###')) {
+          return (
+            <h3 key={lIdx} className="text-[13px] font-bold text-slate-900 mt-5 mb-1.5 tracking-wider uppercase border-l-2 border-blue-600 pl-2.5">
+              {cleanLine.replace('###', '').trim()}
+            </h3>
+          );
+        }
+
+        // Clean Professional List Items
+        const isBullet = cleanLine.startsWith('* ') || cleanLine.startsWith('- ');
+        const parts = (isBullet ? cleanLine.substring(2) : cleanLine).split(/(\*\*.*?\*\*)/g);
+        
+        const renderedText = parts.map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            // Key metrics aur bold elements ko subtle high-contrast inline badge look dena
+            return (
+              <strong key={pIdx} className="font-semibold text-slate-950 bg-slate-100 px-1 py-0.5 rounded text-[13px]">
+                {part.slice(2, -2)}
+              </strong>
+            );
+          }
+          return part;
+        });
+
+        return (
+          <div key={lIdx} className={`text-[14px] font-medium tracking-normal text-slate-600 ${isBullet ? 'flex items-start gap-2.5 pl-1' : ''}`}>
+            {isBullet && <span className="text-blue-600 mt-2 text-[5px] shrink-0">●</span>}
+            <span className="leading-6">{renderedText}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function PremiumDashboard() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'system',
@@ -20,7 +67,6 @@ export default function CyberDashboard() {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // File parsing layer to extract text from uploads
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -29,7 +75,7 @@ export default function CyberDashboard() {
     reader.onload = (event) => {
       const text = event.target?.result;
       if (typeof text === 'string') {
-        setInput((prev) => `${prev}\n[Uploaded Log File: ${file.name}]\n${text}`.trim());
+        setInput((prev) => `${prev}\n[File: ${file.name}]\n${text}`.trim());
       }
     };
     reader.readAsText(file);
@@ -49,9 +95,7 @@ export default function CyberDashboard() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/analyze`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: updatedMessages.map(msg => ({
             role: msg.role || "user",
@@ -61,12 +105,9 @@ export default function CyberDashboard() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Server unexpected response status');
-      }
+      if (!response.ok) throw new Error('Server unexpected response status');
 
       const data = await response.json();
-
       let parsedContent = "";
       let parsedReasoning = undefined;
 
@@ -79,26 +120,20 @@ export default function CyberDashboard() {
         }
       }
 
-      const secureContent = String(parsedContent || "Guru processing finished successfully.").trim();
-      const secureReasoning = parsedReasoning ? String(parsedReasoning).trim() : undefined;
-
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: secureContent,
-          reasoning_details: secureReasoning
+          content: String(parsedContent).trim(),
+          reasoning_details: parsedReasoning ? String(parsedReasoning).trim() : undefined
         },
       ]);
 
     } catch (error) {
-      console.error("Critical Exception Handled Safely:", error);
+      console.error(error);
       setMessages((prev) => [
         ...prev,
-        { 
-          role: 'assistant', 
-          content: "🚀 Engine Update: Data packet received and securely mounted onto the Terminal interface." 
-        }
+        { role: 'assistant', content: "System connection refresh requested. Please submit again." }
       ]);
     } finally {
       setLoading(false);
@@ -106,111 +141,131 @@ export default function CyberDashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#070a13] text-gray-100 font-mono relative overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
+    <div className="flex flex-col h-screen bg-slate-50/60 text-slate-800 antialiased">
       
-      <header className="relative z-10 p-4 border-b border-cyan-500/30 bg-[#0b0f19]/80 backdrop-blur flex justify-between items-center shadow-[0_1px_20px_rgba(6,182,212,0.15)]">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-500/40 shadow-neon-cyan">
-            <TrendingUp className="w-5 h-5 text-cyan-400" />
+      {/* 🔮 Injecting Premium Google Fonts Dynamically */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+      {/* Embedded CSS Style Overrides for Ultimate Typography Experience */}
+      <style jsx global>{`
+        body {
+          font-family: 'Plus Jakarta Sans', sans-serif !important;
+        }
+        .font-mono-premium {
+          font-family: 'JetBrains Mono', monospace !important;
+        }
+      `}</style>
+
+      {/* Header */}
+      <header className="px-6 py-4 bg-white border-b border-slate-200/80 flex justify-between items-center shadow-sm relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-slate-900 rounded-lg text-white shadow-sm">
+            <BarChart3 size={18} />
           </div>
           <div>
-            <h1 className="text-lg font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400">
-              AI TRADE GURU
-            </h1>
-            <p className="text-[10px] text-cyan-500/70 tracking-widest uppercase">Behavioral Engine v1.0</p>
+            <h1 className="text-md font-extrabold text-slate-900 tracking-tight">AI TRADE GURU</h1>
+            <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mt-0.5">Institutional Analytics Platform</p>
           </div>
         </div>
-        
-        <div className="flex items-center space-x-4">
-          <div className="hidden md:flex items-center space-x-2 text-xs text-emerald-400 bg-emerald-950/40 px-3 py-1.5 rounded-md border border-emerald-500/30">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>SEBI COMPLIANT FILTER ACTIVE</span>
-          </div>
-          <div className="flex items-center space-x-2 text-xs text-cyan-400 bg-cyan-950/40 px-3 py-1.5 rounded-md border border-cyan-500/30 shadow-neon-cyan">
-            <Cpu className="w-3.5 h-3.5 animate-pulse" />
-            <span>GEMMA-4 REASONING ENGINE</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-3 py-1 rounded-full">
+            <ShieldCheck size={13} /> Secure Engine Active
           </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10 max-w-5xl w-full mx-auto">
-        {Array.isArray(messages) && messages.filter(m => m && m.role !== 'system').map((msg, index) => (
-          <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-            
-            {msg.role === 'assistant' && msg.reasoning_details && (
-              <details className="w-full max-w-3xl mb-2 text-xs bg-amber-950/10 border border-amber-500/20 rounded-xl p-3 cursor-pointer transition-all hover:border-amber-500/40">
-                <summary className="font-semibold text-amber-400 flex items-center space-x-2 outline-none select-none">
-                  <Terminal className="w-3.5 h-3.5 animate-pulse text-amber-500" />
-                  <span>Deep Reasoning Architecture Logs (Click to Inspect)</span>
-                </summary>
-                <p className="mt-3 whitespace-pre-wrap leading-relaxed border-t border-amber-500/20 pt-3 text-amber-200/60 tracking-wide font-sans italic">
-                  {msg.reasoning_details}
-                </p>
-              </details>
-            )}
+      {/* Main Chat Area */}
+      <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-3xl mx-auto space-y-6 py-4">
+          {messages.filter(m => m && m.role !== 'system').map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              
+              <div className={`max-w-[88%] ${msg.role === 'user' ? 'bg-slate-900 text-white rounded-2xl rounded-tr-sm shadow-md px-5 py-3.5 text-sm font-medium' : 'w-full'}`}>
+                
+                {msg.role === 'user' ? (
+                  <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                ) : (
+                  <div className="bg-white border border-slate-200/70 shadow-sm rounded-2xl p-6 transition-all hover:shadow-md">
+                    
+                    {/* Deep Reasoning Dropdown using JetBrains Mono */}
+                    {msg.reasoning_details && (
+                      <details className="mb-4 text-xs bg-slate-50 border border-slate-200/60 rounded-xl overflow-hidden group">
+                        <summary className="cursor-pointer font-semibold text-slate-500 hover:text-slate-800 p-3 flex items-center justify-between select-none transition-colors">
+                          <span className="flex items-center gap-1.5 font-mono-premium text-[11px]">
+                            <Cpu size={13} className="text-slate-400 animate-pulse" />
+                            Core Engine Execution Path Log
+                          </span>
+                          <ChevronRight size={14} className="transform transition-transform group-open:rotate-90 text-slate-400" />
+                        </summary>
+                        <div className="px-4 pb-4 pt-2 font-mono-premium text-[11px] text-slate-500 border-t border-slate-100 whitespace-pre-wrap leading-relaxed bg-slate-50/50 max-h-60 overflow-y-auto">
+                          {msg.reasoning_details}
+                        </div>
+                      </details>
+                    )}
 
-            <div className={`p-5 rounded-2xl max-w-3xl shadow-xl text-sm leading-relaxed border tracking-wide font-sans ${
-              msg.role === 'user' 
-                ? 'bg-gradient-to-br from-cyan-950/80 to-slate-900 border-cyan-500/40 text-cyan-100 rounded-tr-none shadow-[0_0_15px_rgba(6,182,212,0.1)]' 
-                : 'bg-gradient-to-br from-slate-900/90 to-[#0d1324] border-slate-800 text-gray-200 rounded-tl-none shadow-2xl'
-            }`}>
-              <div className="flex items-start space-x-2">
-                {msg.role === 'assistant' && <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
-                <div className="whitespace-pre-wrap">{msg.content || ""}</div>
+                    {/* Main AI Body Output with Premium Refined Structure */}
+                    <div className="flex items-start gap-3">
+                      <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md shrink-0 mt-0.5">
+                        <Sparkles size={14} />
+                      </div>
+                      <div className="flex-1">
+                        <ProfessionalMarkdown text={msg.content} />
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
               </div>
             </div>
-          </div>
-        ))}
-        
-        {loading && (
-          <div className="text-xs text-cyan-400 flex items-center space-x-2 bg-cyan-950/20 border border-cyan-500/30 p-3.5 rounded-xl w-60 shadow-neon-cyan">
-            <Cpu className="w-4 h-4 animate-spin text-cyan-400" />
-            <span className="font-bold tracking-widest animate-pulse">ANALYZING FO METRICS...</span>
-          </div>
-        )}
+          ))}
+
+          {loading && (
+            <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-4 py-3 rounded-xl shadow-sm w-56 font-mono-premium">
+              <Cpu size={14} className="animate-spin text-blue-600" />
+              <span className="tracking-wide animate-pulse">PROCESSING TELEMETRY...</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <footer className="p-4 border-t border-slate-800/80 bg-[#090d1a]/90 backdrop-blur relative z-10">
-        <form onSubmit={sendMessage} className="max-w-4xl mx-auto relative flex items-center gap-2">
+      {/* Input Center */}
+      <footer className="p-4 bg-white border-t border-slate-200/80 shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
+        <form onSubmit={sendMessage} className="max-w-3xl mx-auto flex items-end gap-2">
           
-          {/* Hidden input field */}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            accept=".txt,.csv,.json,.log" 
-            className="hidden" 
-          />
-
-          {/* Attachment Button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="p-4 bg-[#03060f] border border-slate-800 rounded-xl hover:border-cyan-500/40 text-gray-400 hover:text-cyan-400 transition-all flex items-center justify-center shrink-0"
-            title="Upload CSV/TXT logs"
+          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".txt,.csv,.json,.log" />
+          
+          <button 
+            type="button" 
+            onClick={() => fileInputRef.current?.click()} 
+            className="p-3.5 text-slate-400 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-all shrink-0 mb-0.5"
+            title="Attach Log Data"
           >
-            <Paperclip className="w-5 h-5" />
+            <Paperclip size={18} />
           </button>
 
           <div className="relative flex-1">
-            <textarea
+            <textarea 
               rows={1}
-              value={input}
+              value={input} 
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe trades, errors, or attach a log file..."
-              className="w-full bg-[#03060f] border border-slate-800 rounded-xl pl-5 pr-14 py-4 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-cyan-500/60 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-sans resize-none min-h-[54px] max-h-[150px]"
+              placeholder="Describe your market position or paste execution logs..." 
+              className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl pl-4 pr-12 py-3.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none transition-all resize-none min-h-[48px] max-h-[120px] font-medium"
             />
-            <button
+            <button 
               type="submit"
-              disabled={loading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-gray-950 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
+              disabled={loading || !input.trim()}
+              className="absolute right-2 bottom-2 p-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-slate-900 transition-all"
             >
-              <Send className="w-4 h-4 text-gray-950 stroke-[3]" />
+              <Send size={14} />
             </button>
           </div>
+
         </form>
       </footer>
+
     </div>
   );
 }
