@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Terminal, ShieldCheck, Cpu, Send, Sparkles, TrendingUp } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Terminal, ShieldCheck, Cpu, Send, Sparkles, TrendingUp, Paperclip, FileText } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -18,6 +18,22 @@ export default function CyberDashboard() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // File parsing layer to extract text from uploads
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text === 'string') {
+        setInput((prev) => `${prev}\n[Uploaded Log File: ${file.name}]\n${text}`.trim());
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,9 +66,7 @@ export default function CyberDashboard() {
       }
 
       const data = await response.json();
-      console.log("Backend Incoming Packet:", data);
 
-      // Safe Extraction Layer
       let parsedContent = "";
       let parsedReasoning = undefined;
 
@@ -60,19 +74,11 @@ export default function CyberDashboard() {
         if (typeof data === 'string') {
           parsedContent = data;
         } else if (typeof data === 'object') {
-          // Check standard response paths from generate_trader_insights
           parsedContent = data.content || data.response || data.text || "";
           parsedReasoning = data.reasoning_details || data.reasoning || undefined;
-          
-          // If content is empty but it has a nested structure
-          if (!parsedContent && data.success && data.data) {
-            parsedContent = data.data.content || data.data.text || "";
-            parsedReasoning = data.data.reasoning_details || undefined;
-          }
         }
       }
 
-      // Final strict string sanitation check to prevent React DOM rendering bugs
       const secureContent = String(parsedContent || "Guru processing finished successfully.").trim();
       const secureReasoning = parsedReasoning ? String(parsedReasoning).trim() : undefined;
 
@@ -151,7 +157,7 @@ export default function CyberDashboard() {
             }`}>
               <div className="flex items-start space-x-2">
                 {msg.role === 'assistant' && <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
-                <p className="whitespace-pre-wrap">{msg.content || ""}</p>
+                <div className="whitespace-pre-wrap">{msg.content || ""}</div>
               </div>
             </div>
           </div>
@@ -166,21 +172,43 @@ export default function CyberDashboard() {
       </div>
 
       <footer className="p-4 border-t border-slate-800/80 bg-[#090d1a]/90 backdrop-blur relative z-10">
-        <form onSubmit={sendMessage} className="max-w-4xl mx-auto relative">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Describe your trade logs or behavioral errors (e.g., Revenge trading patterns)..."
-            className="w-full bg-[#03060f] border border-slate-800 rounded-xl pl-5 pr-14 py-4 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-cyan-500/60 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-sans"
+        <form onSubmit={sendMessage} className="max-w-4xl mx-auto relative flex items-center gap-2">
+          
+          {/* Hidden input field */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            accept=".txt,.csv,.json,.log" 
+            className="hidden" 
           />
+
+          {/* Attachment Button */}
           <button
-            type="submit"
-            disabled={loading}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-gray-950 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="p-4 bg-[#03060f] border border-slate-800 rounded-xl hover:border-cyan-500/40 text-gray-400 hover:text-cyan-400 transition-all flex items-center justify-center shrink-0"
+            title="Upload CSV/TXT logs"
           >
-            <Send className="w-4 h-4 text-gray-950 stroke-[3]" />
+            <Paperclip className="w-5 h-5" />
           </button>
+
+          <div className="relative flex-1">
+            <textarea
+              rows={1}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Describe trades, errors, or attach a log file..."
+              className="w-full bg-[#03060f] border border-slate-800 rounded-xl pl-5 pr-14 py-4 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-cyan-500/60 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-sans resize-none min-h-[54px] max-h-[150px]"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-gray-950 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
+            >
+              <Send className="w-4 h-4 text-gray-950 stroke-[3]" />
+            </button>
+          </div>
         </form>
       </footer>
     </div>
