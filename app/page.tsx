@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, ChevronRight, BarChart3, Sun, Moon, Cpu, Sparkles, FileText, ChevronUp, Check, RefreshCw } from 'lucide-react';
+import { Send, Paperclip, ChevronRight, BarChart3, Sun, Moon, Cpu, Sparkles, FileText, ChevronUp, Check, RefreshCw, X } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
-// 📡 Supabase Client Initialization safely checked
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -19,6 +18,12 @@ interface AIModel {
   name: string;
   id: string;
   badge: string;
+}
+
+interface AttachedFileMeta {
+  name: string;
+  url: string;
+  parsedContent: string;
 }
 
 const AVAILABLE_MODELS: AIModel[] = [
@@ -89,6 +94,9 @@ export default function CombinedDashboard() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   
+  // 📄 State for holding file payload tracking out of textarea viewport
+  const [attachedFile, setAttachedFile] = useState<AttachedFileMeta | null>(null);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -107,7 +115,6 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 💾 Initialize Session Function definition placed before useEffect to satisfy Next builds
   const initializeSession = async () => {
     let localSessionId = typeof window !== 'undefined' ? localStorage.getItem('ai_trade_guru_session') : null;
     
@@ -174,6 +181,7 @@ export default function CombinedDashboard() {
         localStorage.removeItem('ai_trade_guru_session');
       }
       setMessages([]);
+      setAttachedFile(null);
       await initializeSession();
     }
   };
@@ -207,36 +215,39 @@ export default function CombinedDashboard() {
           { session_id: sessionId, file_name: file.name, file_url: publicFileUrl, file_type: fileExtension }
         ]);
 
+      let extractedData = "";
+
       if (['xlsx', 'xls', 'csv'].includes(fileExtension || '')) {
         const XLSX = (window as any).XLSX;
         if (XLSX) {
           const d = await file.arrayBuffer();
           const wb = XLSX.read(d, { type: 'array' });
-          let txt = '';
-          wb.SheetNames.forEach((n: string) => { txt += XLSX.utils.sheet_to_txt(wb.Sheets[n]); });
-          setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${txt.trim()}`.trim());
+          wb.SheetNames.forEach((n: string) => { extractedData += XLSX.utils.sheet_to_txt(wb.Sheets[n]) + '\n'; });
         }
       } else if (fileExtension === 'pdf' && (window as any).pdfjsLib) {
         const pdfjsLib = (window as any).pdfjsLib;
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
         const pdf = await loadingTask.promise;
-        let compiledText = '';
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          compiledText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
+          extractedData += textContent.items.map((item: any) => item.str).join(' ') + '\n';
         }
-        setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${compiledText.trim()}`.trim());
       } else {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (typeof event.target?.result === 'string') {
-            setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${event.target?.result}`.trim());
-          }
-        };
-        reader.readAsText(file);
+        extractedData = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (event) => resolve(typeof event.target?.result === 'string' ? event.target.result : "");
+          reader.readAsText(file);
+        });
       }
+
+      // 🌟 TEXTAREA REMOVE CONTEXT INTERFACES: Textarea remains clean, data loaded safely in background state block
+      setAttachedFile({
+        name: file.name,
+        url: publicFileUrl,
+        parsedContent: extractedData.trim()
+      });
 
     } catch (err: any) {
       console.error(err);
@@ -250,17 +261,31 @@ export default function CombinedDashboard() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading || uploadingFile || !sessionId) return;
+    if ((!input.trim() && !attachedFile) || loading || uploadingFile || !sessionId) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: input.trim() };
-    const updatedMessages = [...messages, userMessage];
+    let rawUserPayloadContent = input.trim();
+    let dynamicDisplayContent = input.trim();
+
+    // Secure backend payload structural mapping layers
+    if (attachedFile) {
+      rawUserPayloadContent += `\n\n[Asset Reference Ledger Data: ${attachedFile.url}]\n${attachedFile.parsedContent}`;
+      if (!dynamicDisplayContent) {
+        dynamicDisplayContent = `📄 Sent File Data: ${attachedFile.name}`;
+      } else {
+        dynamicDisplayContent += `\n\n📄 [Attached Asset Reference: ${attachedFile.name}]`;
+      }
+    }
+
+    const userMessage: ChatMessage = { role: 'user', content: dynamicDisplayContent };
+    const updatedMessagesForAI = [...messages, { role: 'user', content: rawUserPayloadContent } as ChatMessage];
     
-    setMessages(updatedMessages);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setAttachedFile(null); // Clean attachment reference overlay card immediately
     setLoading(true);
 
     await supabase.from('chat_messages').insert([
-      { session_id: sessionId, role: userMessage.role, content: userMessage.content }
+      { session_id: sessionId, role: 'user', content: dynamicDisplayContent }
     ]);
 
     try {
@@ -268,7 +293,7 @@ export default function CombinedDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: updatedMessages.map(msg => ({
+          messages: updatedMessagesForAI.map(msg => ({
             role: msg.role || "user",
             content: msg.content || "",
             reasoning_details: msg.reasoning_details || null
@@ -370,9 +395,9 @@ export default function CombinedDashboard() {
         <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
           {messages.filter(m => m && m.role !== 'system').map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[90%] sm:max-w-[85%] ${msg.role === 'user' ? (isDarkMode ? 'bg-cyan-950/60 border border-cyan-800 text-slate-100 rounded-2xl rounded-tr-sm shadow-md px-4 py-3 text-sm font-medium' : 'bg-slate-900 text-white rounded-2xl rounded-tr-sm shadow-md px-4 py-3 text-sm font-medium') : 'w-full'}`}>
+              <div className={`max-w-[90%] sm:max-w-[85%] ${msg.role === 'user' ? (isDarkMode ? 'bg-cyan-950/60 border border-cyan-800 text-slate-100 rounded-2xl rounded-tr-sm shadow-md px-4 py-3 text-sm font-medium whitespace-pre-wrap' : 'bg-slate-900 text-white rounded-2xl rounded-tr-sm shadow-md px-4 py-3 text-sm font-medium whitespace-pre-wrap') : 'w-full'}`}>
                 {msg.role === 'user' ? (
-                  <p className="whitespace-pre-wrap leading-relaxed font-sans">{msg.content}</p>
+                  <p className="leading-relaxed font-sans">{msg.content}</p>
                 ) : (
                   <div className={`border rounded-2xl p-5 sm:p-6 transition-all shadow-sm ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-white border-slate-200/70'}`}>
                     {msg.reasoning_details && (
@@ -470,6 +495,25 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
+          {/* 💎 SAAS STANDARD CHIP ATTACHMENT PANEL OVERLAY */}
+          {attachedFile && (
+            <div className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border max-w-sm transition-all shadow-sm animate-fadeIn ${
+              isDarkMode ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
+            }`}>
+              <div className="flex items-center gap-2 truncate">
+                <FileText size={16} className={isDarkMode ? 'text-cyan-400' : 'text-blue-600'} />
+                <span className="text-xs font-bold truncate tracking-tight">{attachedFile.name}</span>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setAttachedFile(null)} 
+                className={`p-1 rounded-md transition-colors hover:bg-slate-500/20 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+              >
+                <X size={14} className="stroke-[3]" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <input 
               type="file" 
@@ -494,7 +538,7 @@ export default function CombinedDashboard() {
                 rows={1}
                 value={input} 
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={`Type or drop files via ${selectedModel.name}...`} 
+                placeholder={attachedFile ? "Ask anything about this file..." : `Type or drop files via ${selectedModel.name}...`} 
                 className={`w-full border rounded-xl pl-4 pr-14 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${
                   isDarkMode 
                     ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' 
@@ -504,7 +548,7 @@ export default function CombinedDashboard() {
               
               <button 
                 type="button"
-                disabled={loading || !input.trim() || uploadingFile}
+                disabled={loading || (!input.trim() && !attachedFile) || uploadingFile}
                 onClick={sendMessage}
                 className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${
                   isDarkMode 
