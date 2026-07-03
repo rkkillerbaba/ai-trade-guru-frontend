@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Send, Paperclip, ChevronRight, BarChart3, ShieldCheck, Cpu, Sparkles, Sun, Moon } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Send, Paperclip, ChevronRight, BarChart3, ShieldCheck, Cpu, Sparkles, Sun, Moon, FileText } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -15,13 +15,13 @@ interface AIModel {
   badge: string;
 }
 
-// 💎 Curated Best Premium Models Choice Mapping
+// 🌐 Best Premium Short-Name Model Mapping according to user specifications
 const AVAILABLE_MODELS: AIModel[] = [
-  { name: 'Gemma-4 Reasoning 26B', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
-  { name: 'Qwen-3 Next 80B Instruct', id: 'qwen/qwen3-next-80b-instruct:free', badge: 'ANALYTICS' },
-  { name: 'OpenAI GPT-OSS 120B', id: 'openai/gpt-oss-120b:free', badge: 'HIGH INTELLECT' },
-  { name: 'Qwen-3 Coder 480B', id: 'qwen/qwen3-coder-480b-a35b:free', badge: 'DATA PROCESSING' },
-  { name: 'NVIDIA Nemotron 3 Ultra', id: 'nvidia/nemotron-3-ultra:free', badge: 'STRATEGY CRITIC' }
+  { name: 'Gemini Pro', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
+  { name: 'Qwen lite', id: 'qwen/qwen3-next-80b-a3b-instruct:free', badge: 'ANALYTICS' },
+  { name: 'GPT Pro', id: 'openai/gpt-oss-120b:free', badge: 'INTELLLECT' },
+  { name: 'Qwen Pro', id: 'qwen/qwen3-coder:free', badge: 'LOGS' },
+  { name: 'Nvidia', id: 'nvidia/nemotron-3-ultra-550b-a55b:free', badge: 'STRATEGY' }
 ];
 
 function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean }) {
@@ -85,25 +85,76 @@ export default function CombinedDashboard() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 📝 Client-side PDF parser worker runtime injection
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
+    script.async = true;
+    document.body.appendChild(script);
+    script.onload = () => {
+      if (window && (window as any).pdfjsLib) {
+        (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+      }
+    };
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result;
-      if (typeof text === 'string') {
-        setInput((prev) => `${prev}\n[File: ${file.name}]\n${text}`.trim());
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      const pdfjsLib = (window as any).pdfjsLib;
+      if (!pdfjsLib) {
+        alert('PDF Engine loading, please try in a second.');
+        return;
       }
-    };
-    reader.readAsText(file);
+
+      setUploadingPdf(true);
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        let compiledText = '';
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageItems: any[] = textContent.items;
+          const pageText = pageItems.map((item) => item.str).join(' ');
+          compiledText += pageText + '\n';
+        }
+
+        if (compiledText.trim()) {
+          setInput((prev) => `${prev}\n[Parsed PDF: ${file.name}]\n${compiledText.trim()}`.trim());
+        } else {
+          alert('Could not extract text from this PDF.');
+        }
+      } catch (err) {
+        console.error('PDF parsing matrix failure:', err);
+      } finally {
+        setUploadingPdf(false);
+      }
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result;
+        if (typeof text === 'string') {
+          setInput((prev) => `${prev}\n[File: ${file.name}]\n${text}`.trim());
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || uploadingPdf) return;
 
     const userMessage: ChatMessage = { role: 'user', content: input.trim() };
     const updatedMessages = [...messages, userMessage];
@@ -122,7 +173,7 @@ export default function CombinedDashboard() {
             content: msg.content || "",
             reasoning_details: msg.reasoning_details || null
           })),
-          model_name: selectedModel.id // Live parameter forwarding to backend
+          model_name: selectedModel.id
         }),
       });
 
@@ -152,10 +203,6 @@ export default function CombinedDashboard() {
 
     } catch (error) {
       console.error(error);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: "Telemetry synchronization reset. Please submit parameters again." }
-      ]);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
       setLoading(false);
@@ -167,12 +214,10 @@ export default function CombinedDashboard() {
       isDarkMode ? 'bg-[#0b0f19] text-slate-100 font-sans' : 'bg-slate-50/60 text-slate-800 font-sans'
     }`}>
       
-      {/* 🔮 Premium Google Fonts */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-      {/* Global CSS Force Rules */}
       <style jsx global>{`
         html, body {
           margin: 0;
@@ -187,12 +232,10 @@ export default function CombinedDashboard() {
 
       {/* Header Bar */}
       <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-10 border-b transition-colors ${
-        isDarkMode 
-          ? 'bg-[#0f1626] border-slate-800 shadow-md' 
-          : 'bg-white border-slate-200/80 shadow-sm'
+        isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'
       }`}>
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg text-white shadow-sm transition-colors ${isDarkMode ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-slate-900'}`}>
+          <div className={`p-2 rounded-lg text-white transition-colors ${isDarkMode ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-slate-900'}`}>
             <BarChart3 size={18} className={isDarkMode ? 'text-cyan-400' : 'text-white'} />
           </div>
           <div>
@@ -200,105 +243,79 @@ export default function CombinedDashboard() {
               AI TRADE GURU
             </h1>
             <p className={`text-[9px] font-bold tracking-widest uppercase mt-0.5 ${isDarkMode ? 'text-cyan-400/80' : 'text-slate-400'}`}>
-              Institutional Platform • <span className="text-blue-500 font-extrabold">{selectedModel.name.split(' ')[0]}</span> Active
+              Institutional Platform • <span className="text-blue-500 font-extrabold">{selectedModel.name}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`p-2 rounded-xl border transition-all flex items-center justify-center shrink-0 ${
-              isDarkMode 
-                ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700' 
-                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className={`p-2 rounded-xl border transition-all flex items-center justify-center shrink-0 ${
+            isDarkMode ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
       </header>
 
-      {/* Central Chat Feed Container */}
-      <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${
-        isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'
-      }`}>
+      {/* Central Chat Feed */}
+      <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
         <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
           {messages.filter(m => m && m.role !== 'system').map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              
               <div className={`max-w-[90%] sm:max-w-[85%] ${msg.role === 'user' ? (isDarkMode ? 'bg-cyan-950/60 border border-cyan-800 text-slate-100 rounded-2xl rounded-tr-sm shadow-md px-4 py-3 text-sm font-medium' : 'bg-slate-900 text-white rounded-2xl rounded-tr-sm shadow-md px-4 py-3 text-sm font-medium') : 'w-full'}`}>
-                
                 {msg.role === 'user' ? (
                   <p className="whitespace-pre-wrap leading-relaxed font-sans">{msg.content}</p>
                 ) : (
-                  <div className={`border rounded-2xl p-5 sm:p-6 transition-all shadow-sm ${
-                    isDarkMode 
-                      ? 'bg-[#121b2e] border-slate-800' 
-                      : 'bg-white border-slate-200/70'
-                  }`}>
-                    
-                    {/* Deep Reasoning Dropdown */}
+                  <div className={`border rounded-2xl p-5 sm:p-6 transition-all shadow-sm ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-white border-slate-200/70'}`}>
                     {msg.reasoning_details && (
-                      <details className={`mb-4 text-xs border rounded-xl overflow-hidden group ${
-                        isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200/60'
-                      }`}>
-                        <summary className={`cursor-pointer font-semibold p-3 flex items-center justify-between select-none transition-colors ${
-                          isDarkMode ? 'text-amber-400 hover:text-amber-300' : 'text-slate-500 hover:text-slate-800'
-                        }`}>
-                          <span className="flex items-center gap-1.5 font-mono-premium text-[11px]">
-                            <Cpu size={13} className="text-slate-400 animate-pulse" />
-                            Core Engine Execution Path Log
-                          </span>
-                          <ChevronRight size={14} className="transform transition-transform group-open:rotate-90 text-slate-400" />
+                      <details className={`mb-4 text-xs border rounded-xl overflow-hidden group ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200/60'}`}>
+                        <summary className={`cursor-pointer font-semibold p-3 flex items-center justify-between select-none transition-colors ${isDarkMode ? 'text-amber-400' : 'text-slate-500'}`}>
+                          <span className="flex items-center gap-1.5 font-mono-premium text-[11px]"><Cpu size={13} /> Process Step Engine Mapping</span>
+                          <ChevronRight size={14} />
                         </summary>
-                        <div className={`px-4 pb-4 pt-2 font-mono-premium text-[11px] border-t whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto ${
-                          isDarkMode ? 'text-slate-400 border-slate-800 bg-[#0f1626]' : 'text-slate-500 border-slate-100 bg-slate-50/50'
-                        }`}>
+                        <div className={`px-4 pb-4 pt-2 font-mono-premium text-[11px] border-t whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto ${isDarkMode ? 'text-slate-400 border-slate-800 bg-[#0f1626]' : 'text-slate-500 border-slate-100 bg-slate-50/50'}`}>
                           {msg.reasoning_details}
                         </div>
                       </details>
                     )}
-
-                    {/* Main AI Body Output */}
                     <div className="flex items-start gap-3">
-                      <div className={`p-1.5 rounded-md shrink-0 mt-0.5 ${isDarkMode ? 'bg-cyan-950/40 text-cyan-400' : 'bg-blue-50 text-blue-600'}`}>
-                        <Sparkles size={14} />
-                      </div>
-                      <div className="flex-1 w-full">
-                        <ProfessionalMarkdown text={msg.content} isDark={isDarkMode} />
-                      </div>
+                      <div className={`p-1.5 rounded-md shrink-0 mt-0.5 ${isDarkMode ? 'bg-cyan-950/40 text-cyan-400' : 'bg-blue-50 text-blue-600'}`}><Sparkles size={14} /></div>
+                      <div className="flex-1 w-full"><ProfessionalMarkdown text={msg.content} isDark={isDarkMode} /></div>
                     </div>
-
                   </div>
                 )}
-
               </div>
             </div>
           ))}
 
+          {uploadingPdf && (
+            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-60 font-mono-premium border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-amber-400' : 'bg-white border-slate-200 text-slate-500'}`}>
+              <FileText size={14} className="animate-bounce text-amber-500" />
+              <span className="tracking-wide animate-pulse">EXTRACTING PDF MATRIX...</span>
+            </div>
+          )}
+
           {loading && (
-            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-64 font-mono-premium border ${
-              isDarkMode ? 'bg-slate-900 border-slate-800 text-cyan-400' : 'bg-white border-slate-200 text-slate-500'
-            }`}>
-              <Cpu size={14} className={`animate-spin ${isDarkMode ? 'text-cyan-400' : 'text-blue-600'}`} />
-              <span className="tracking-wide animate-pulse">PROCESSING WITH {selectedModel.name.toUpperCase()}...</span>
+            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-56 font-mono-premium border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-cyan-400' : 'bg-white border-slate-200 text-slate-500'}`}>
+              <Cpu size={14} className="animate-spin" />
+              <span className="tracking-wide animate-pulse">RUNNING {selectedModel.name.toUpperCase()}...</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* 🛠️ Re-engineered Professional Footer Core Input Panel */}
-      <footer className={`p-4 border-t relative z-10 transition-colors ${
-        isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-md'
+      {/* 🛠️ Compact Professional Footer Core Input Panel */}
+      <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
+        isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
       }`}>
-        <div className="max-w-3xl mx-auto flex flex-col gap-3">
+        <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
           
-          {/* 🎛️ Row 1: Premium Model Dropdown Selector Layout Area */}
-          <div className="flex items-center justify-between gap-4 px-1">
-            <span className={`text-[11px] font-bold tracking-wider uppercase ${isDarkMode ? 'text-slate-400 font-mono-premium' : 'text-slate-500'}`}>
-              Select Engine Protocol:
+          {/* 🎛️ Row 1: Small & Sleek Dropdown Selection Menu Layout */}
+          <div className="flex items-center justify-between gap-2 px-1">
+            <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Engine Protocol:
             </span>
             <div className="relative">
               <select
@@ -307,37 +324,34 @@ export default function CombinedDashboard() {
                   const found = AVAILABLE_MODELS.find(m => m.id === e.target.value);
                   if (found) setSelectedModel(found);
                 }}
-                className={`text-xs font-bold py-1.5 pl-3 pr-8 rounded-lg border appearance-none cursor-pointer focus:outline-none transition-all max-w-[220px] sm:max-w-xs truncate ${
+                className={`text-[11px] font-bold py-1 pl-2.5 pr-7 rounded-md border appearance-none cursor-pointer focus:outline-none transition-all shadow-sm ${
                   isDarkMode 
                     ? 'bg-[#121b2e] border-slate-700 text-cyan-400 focus:border-cyan-500' 
-                    : 'bg-slate-50 border-slate-300 text-slate-800 focus:border-blue-500'
+                    : 'bg-slate-50 border-slate-300 text-slate-700 focus:border-blue-500'
                 }`}
-                style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%2322d3ee' : '%23475569'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`, backgroundSize: '12px', backgroundPosition: 'right 8px center', backgroundRepeat: 'no-repeat' }}
+                style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%2322d3ee' : '%23475569'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`, backgroundSize: '10px', backgroundPosition: 'right 6px center', backgroundRepeat: 'no-repeat' }}
               >
                 {AVAILABLE_MODELS.map((model) => (
                   <option key={model.id} value={model.id}>
-                    {model.name} [{model.badge}]
+                    {model.name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* ✍px Row 2: Aligned Input Center Actions Container */}
+          {/* ✍️ Row 2: Aligned Input Rows */}
           <div className="flex items-center gap-2">
-            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".txt,.csv,.json,.log" />
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.txt,.csv,.json,.log" />
             
-            {/* Attachment Button Perfectly Proportional */}
             <button 
               type="button" 
               onClick={() => fileInputRef.current?.click()} 
-              className={`w-11 h-11 rounded-xl border transition-all shrink-0 flex items-center justify-center ${
-                isDarkMode 
-                  ? 'bg-[#121b2e] border-slate-700 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40' 
-                  : 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200'
+              className={`w-10 h-10 rounded-xl border transition-all shrink-0 flex items-center justify-center ${
+                isDarkMode ? 'bg-[#121b2e] border-slate-700 text-slate-400 hover:text-cyan-400' : 'bg-slate-50 border-slate-300 text-slate-500 hover:bg-slate-100'
               }`}
             >
-              <Paperclip size={18} />
+              <Paperclip size={17} />
             </button>
 
             <div className="relative flex-1 flex items-center">
@@ -345,24 +359,22 @@ export default function CombinedDashboard() {
                 rows={1}
                 value={input} 
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={`Query data via ${selectedModel.name.split(' ')[0]}...`} 
-                className={`w-full border rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${
+                placeholder={`Type or drop files via ${selectedModel.name}...`} 
+                className={`w-full border rounded-xl pl-4 pr-11 py-2.5 text-sm focus:outline-none transition-all resize-none min-h-[40px] max-h-[90px] font-medium leading-normal ${
                   isDarkMode 
                     ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
                 }`}
               />
-              
-              {/* Submit Button Centered Vertically inside Input Row */}
               <button 
                 type="button"
-                disabled={loading || !input.trim()}
+                disabled={loading || !input.trim() || uploadingPdf}
                 onClick={sendMessage}
-                className={`absolute right-1.5 w-8 h-8 rounded-lg transition-all flex items-center justify-center ${
+                className={`absolute right-1.5 w-7.5 h-7.5 rounded-lg transition-all flex items-center justify-center ${
                   isDarkMode ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'bg-slate-900 text-white hover:bg-slate-800'
                 } disabled:opacity-20`}
               >
-                <Send size={13} className="stroke-[2.5]" />
+                <Send size={12} className="stroke-[2.5]" />
               </button>
             </div>
           </div>
