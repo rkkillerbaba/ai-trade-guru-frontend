@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, ChevronRight, BarChart3, ShieldCheck, Cpu, Sparkles, Sun, Moon, FileText } from 'lucide-react';
+import { Send, Paperclip, ChevronRight, BarChart3, Sun, Moon, Cpu, Sparkles, FileText, ChevronUp, Check } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -15,7 +15,6 @@ interface AIModel {
   badge: string;
 }
 
-// 🌐 Best Premium Short-Name Model Mapping according to user specifications
 const AVAILABLE_MODELS: AIModel[] = [
   { name: 'Gemini Pro', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
   { name: 'Qwen lite', id: 'qwen/qwen3-next-80b-a3b-instruct:free', badge: 'ANALYTICS' },
@@ -77,6 +76,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
 export default function CombinedDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // Controls modern custom select drawer
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'system',
@@ -86,9 +86,21 @@ export default function CombinedDashboard() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // 📝 Client-side PDF parser worker runtime injection
+  // Close custom drop-up popover when user clicks anywhere outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
@@ -145,7 +157,7 @@ export default function CombinedDashboard() {
       reader.onload = (event) => {
         const text = event.target?.result;
         if (typeof text === 'string') {
-          setInput((prev) => `${prev}\n[File: ${file.name}]\n${text}`.trim());
+          setInput((prev) => `${prev}\n[File Context Frame: ${file.name}]\n${text}`.trim());
         }
       };
       reader.readAsText(file);
@@ -177,7 +189,7 @@ export default function CombinedDashboard() {
         }),
       });
 
-      if (!response.ok) throw new Error('Network error status caught');
+      if (!response.ok) throw new Error('Gateway route pipeline synchronization failure');
 
       const data = await response.json();
       let parsedContent = "";
@@ -203,6 +215,10 @@ export default function CombinedDashboard() {
 
     } catch (error) {
       console.error(error);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: "Telemetry processing reset sequence activated. Please re-submit raw metrics logs." }
+      ]);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
       setLoading(false);
@@ -243,7 +259,7 @@ export default function CombinedDashboard() {
               AI TRADE GURU
             </h1>
             <p className={`text-[9px] font-bold tracking-widest uppercase mt-0.5 ${isDarkMode ? 'text-cyan-400/80' : 'text-slate-400'}`}>
-              Institutional Platform • <span className="text-blue-500 font-extrabold">{selectedModel.name}</span>
+              Institutional Platform • <span className="text-blue-500 font-extrabold">{selectedModel.name}</span> Active
             </p>
           </div>
         </div>
@@ -259,7 +275,7 @@ export default function CombinedDashboard() {
         </button>
       </header>
 
-      {/* Central Chat Feed */}
+      {/* Central Chat Feed Viewport */}
       <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
         <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
           {messages.filter(m => m && m.role !== 'system').map((msg, i) => (
@@ -306,75 +322,109 @@ export default function CombinedDashboard() {
         </div>
       </div>
 
-      {/* 🛠️ Compact Professional Footer Core Input Panel */}
+      {/* 🛠️ Re-engineered Compact Footer (Fixed Alignment, Large Send & Popover Menu) */}
       <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
       }`}>
         <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
           
-          {/* 🎛️ Row 1: Small & Sleek Dropdown Selection Menu Layout */}
-          <div className="flex items-center justify-between gap-2 px-1">
-            <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          {/* Dropdown Row Replaced with Modern Custom Popover Trigger */}
+          <div className="flex items-center justify-between gap-2 px-1 relative" ref={menuRef}>
+            <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400 font-mono-premium' : 'text-slate-500'}`}>
               Engine Protocol:
             </span>
+            
+            {/* Custom Popover Button Element */}
             <div className="relative">
-              <select
-                value={selectedModel.id}
-                onChange={(e) => {
-                  const found = AVAILABLE_MODELS.find(m => m.id === e.target.value);
-                  if (found) setSelectedModel(found);
-                }}
-                className={`text-[11px] font-bold py-1 pl-2.5 pr-7 rounded-md border appearance-none cursor-pointer focus:outline-none transition-all shadow-sm ${
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={`text-[11px] font-bold py-1.5 px-3 rounded-lg border transition-all flex items-center gap-1.5 shadow-sm select-none ${
                   isDarkMode 
-                    ? 'bg-[#121b2e] border-slate-700 text-cyan-400 focus:border-cyan-500' 
-                    : 'bg-slate-50 border-slate-300 text-slate-700 focus:border-blue-500'
+                    ? 'bg-[#121b2e] border-slate-700 text-cyan-400 hover:border-cyan-500' 
+                    : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
                 }`}
-                style={{ backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='${isDarkMode ? '%2322d3ee' : '%23475569'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`, backgroundSize: '10px', backgroundPosition: 'right 6px center', backgroundRepeat: 'no-repeat' }}
               >
-                {AVAILABLE_MODELS.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </select>
+                <span>{selectedModel.name}</span>
+                <ChevronUp size={12} className={`transform transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* 🔮 Modern Glassmorphic Popover Drop-up Menu */}
+              {isMenuOpen && (
+                <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md transition-all z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 ${
+                  isDarkMode 
+                    ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' 
+                    : 'bg-white/95 border-slate-200 text-slate-800'
+                }`}>
+                  <div className="space-y-0.5">
+                    {AVAILABLE_MODELS.map((model) => {
+                      const isSelected = selectedModel.id === model.id;
+                      return (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedModel(model);
+                            setIsMenuOpen(false);
+                          }}
+                          className={`w-full text-left text-xs font-semibold px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${
+                            isSelected 
+                              ? (isDarkMode ? 'bg-cyan-500/10 text-cyan-400 font-bold' : 'bg-blue-50 text-blue-600 font-bold') 
+                              : (isDarkMode ? 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900')
+                          }`}
+                        >
+                          <span>{model.name}</span>
+                          {isSelected && <Check size={12} className="shrink-0 stroke-[2.5]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* ✍️ Row 2: Aligned Input Rows */}
+          {/* Action Row */}
           <div className="flex items-center gap-2">
             <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.txt,.csv,.json,.log" />
             
+            {/* Attachment Button */}
             <button 
               type="button" 
               onClick={() => fileInputRef.current?.click()} 
-              className={`w-10 h-10 rounded-xl border transition-all shrink-0 flex items-center justify-center ${
+              className={`w-11 h-11 rounded-xl border transition-all shrink-0 flex items-center justify-center ${
                 isDarkMode ? 'bg-[#121b2e] border-slate-700 text-slate-400 hover:text-cyan-400' : 'bg-slate-50 border-slate-300 text-slate-500 hover:bg-slate-100'
               }`}
             >
-              <Paperclip size={17} />
+              <Paperclip size={18} />
             </button>
 
-            <div className="relative flex-1 flex items-center">
+            <div className="relative flex-1 flex items-center bg-transparent">
               <textarea 
                 rows={1}
                 value={input} 
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={`Type or drop files via ${selectedModel.name}...`} 
-                className={`w-full border rounded-xl pl-4 pr-11 py-2.5 text-sm focus:outline-none transition-all resize-none min-h-[40px] max-h-[90px] font-medium leading-normal ${
+                className={`w-full border rounded-xl pl-4 pr-14 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${
                   isDarkMode 
                     ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
                 }`}
               />
+              
+              {/* Giant Highly Accessible Send Button */}
               <button 
                 type="button"
                 disabled={loading || !input.trim() || uploadingPdf}
                 onClick={sendMessage}
-                className={`absolute right-1.5 w-7.5 h-7.5 rounded-lg transition-all flex items-center justify-center ${
-                  isDarkMode ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'bg-slate-900 text-white hover:bg-slate-800'
-                } disabled:opacity-20`}
+                className={`absolute right-2 w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition-all flex items-center justify-center shadow-md ${
+                  isDarkMode 
+                    ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' 
+                    : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
+                }`}
+                style={{ top: '50%', transform: 'translateY(-50%)' }}
               >
-                <Send size={12} className="stroke-[2.5]" />
+                <Send size={15} className="stroke-[2.5]" />
               </button>
             </div>
           </div>
