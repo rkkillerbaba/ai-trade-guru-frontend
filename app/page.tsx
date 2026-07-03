@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, ChevronRight, BarChart3, Sun, Moon, Cpu, Sparkles, FileText, ChevronUp, Check } from 'lucide-react';
+import { Send, Paperclip, ChevronRight, BarChart3, Sun, Moon, Cpu, Sparkles, FileText, ChevronUp, Check, RefreshCw } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+// 📡 Supabase Client Initialization from Vercel Environment Variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -15,7 +21,7 @@ interface AIModel {
   badge: string;
 }
 
-// 🌐 Pure Stable Premium Model Selection (Venice Pro Removed Completely)
+// 🌐 Strictly Synced Stable Premium Free Cluster Mapping
 const AVAILABLE_MODELS: AIModel[] = [
   { name: 'Gemini Pro', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
   { name: 'GPT Pro', id: 'openai/gpt-oss-120b:free', badge: 'INTELLLECT' },
@@ -77,19 +83,23 @@ export default function CombinedDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'system',
-      content: 'Aap AI Trade Guru ke advanced behavioral coach hain. F&O traders ke behavioral mistakes ko deeply analyze kijiye.'
-    }
-  ]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // 🔄 Auto Scroll System
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Click Outside Popover Controller
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -100,72 +110,162 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // 📝 Load External Parsing Scripts & Sync Cloud Handlers
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
-    script.async = true;
-    document.body.appendChild(script);
-    script.onload = () => {
+    // 1. PDF Matrix Parser Engine Injection
+    const pdfScript = document.createElement('script');
+    pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
+    pdfScript.async = true;
+    document.body.appendChild(pdfScript);
+    pdfScript.onload = () => {
       if (window && (window as any).pdfjsLib) {
         (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
       }
     };
+
+    // 2. SheetJS Tabular Excel Module Injection
+    const excelScript = document.createElement('script');
+    excelScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    excelScript.async = true;
+    document.body.appendChild(excelScript);
+
+    // 💾 Initialize or Load Cloud Sessions
+    initializeSession();
+
     return () => {
-      document.body.removeChild(script);
+      document.body.removeChild(pdfScript);
+      document.body.removeChild(excelScript);
     };
   }, []);
 
+  // 🔑 Fetch Existing Session or Construct a New Identity Block
+  const initializeSession = async () => {
+    let localSessionId = localStorage.getItem('ai_trade_guru_session');
+    
+    if (!localSessionId) {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert([{}])
+        .select();
+      
+      if (!error && data && data[0]) {
+        localSessionId = data[0].id;
+        localStorage.setItem('ai_trade_guru_session', localSessionId!);
+      }
+    }
+
+    if (localSessionId) {
+      setSessionId(localSessionId);
+      
+      // Pull history strictly from Supabase Database
+      const { data: history, error: historyError } = await supabase
+        .from('chat_messages')
+        .select('role, content, reasoning_details')
+        .eq('session_id', localSessionId)
+        .order('id', { ascending: true });
+
+      if (!historyError && history && history.length > 0) {
+        setMessages(history as ChatMessage[]);
+      } else {
+        const systemMessage: ChatMessage = {
+          role: 'system',
+          content: 'Aap AI Trade Guru ke advanced behavioral coach hain. F&O traders ke behavioral mistakes ko deeply analyze kijiye.'
+        };
+        setMessages([systemMessage]);
+        await supabase.from('chat_messages').insert([{ session_id: localSessionId, ...systemMessage }]);
+      }
+    }
+  };
+
+  // 🗑️ Hard Reset Session Command Trigger
+  const clearChatSession = async () => {
+    if (confirm("Kya aap sach mein chat history mita kar naya session start karna chahte hain?")) {
+      localStorage.removeItem('ai_trade_guru_session');
+      setMessages([]);
+      await initializeSession();
+    }
+  };
+
+  // 🚀 SUPABASE CLOUD FILE UPLOAD PIPELINE
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !sessionId) return;
 
-    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-      const pdfjsLib = (window as any).pdfjsLib;
-      if (!pdfjsLib) {
-        alert('PDF Engine loading, please try in a second.');
-        return;
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    setUploadingFile(true);
+    setUploadStatus(`Uploading to Supabase...`);
+
+    try {
+      const uniqueFileName = `${Date.now()}_${file.name}`;
+
+      // 1. Pipeline binary stream to Supabase Storage Bucket
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('trader-logs')
+        .upload(`uploads/${uniqueFileName}`, file);
+
+      if (storageError) throw storageError;
+
+      // 2. Fetch public access URL reference path mapping
+      const { data: urlData } = supabase.storage
+        .from('trader-logs')
+        .getPublicUrl(`uploads/${uniqueFileName}`);
+
+      const publicFileUrl = urlData.publicUrl;
+
+      // 3. Register meta metadata record to Supabase DB relational structure
+      await supabase
+        .from('user_uploads')
+        .insert([
+          { session_id: sessionId, file_name: file.name, file_url: publicFileUrl, file_type: fileExtension }
+        ]);
+
+      // 4. Client Side Fallback Context Read for Realtime Appending Pass
+      if (['xlsx', 'xls', 'csv'].includes(fileExtension || '')) {
+        const XLSX = (window as any).XLSX;
+        if (XLSX) {
+          const d = await file.arrayBuffer();
+          const wb = XLSX.read(d, { type: 'array' });
+          let txt = '';
+          wb.SheetNames.forEach((n) => { txt += XLSX.utils.sheet_to_txt(wb.Sheets[n]); });
+          setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${txt.trim()}`.trim());
+        }
+      } else if (fileExtension === 'pdf' || file.type === 'application/pdf') {
+        const pdfjsLib = (window as any).pdfjsLib;
+        if (pdfjsLib) {
+          const arrayBuffer = await file.arrayBuffer();
+          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+          const pdf = await loadingTask.promise;
+          let compiledText = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            compiledText += textContent.items.map((item: any) => item.str).join(' ') + '\n';
+          }
+          setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${compiledText.trim()}`.trim());
+        }
+      } else {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (typeof event.target?.result === 'string') {
+            setInput((prev) => `${prev}\n[Cloud Asset Reference: ${publicFileUrl}]\n${event.target?.result}`.trim());
+          }
+        };
+        reader.readAsText(file);
       }
 
-      setUploadingPdf(true);
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-        let compiledText = '';
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageItems: any[] = textContent.items;
-          const pageText = pageItems.map((item) => item.str).join(' ');
-          compiledText += pageText + '\n';
-        }
-
-        if (compiledText.trim()) {
-          setInput((prev) => `${prev}\n[Parsed PDF: ${file.name}]\n${compiledText.trim()}`.trim());
-        } else {
-          alert('Could not extract text from this PDF.');
-        }
-      } catch (err) {
-        console.error('PDF parsing failure:', err);
-      } finally {
-        setUploadingPdf(false);
-      }
-    } else {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result;
-        if (typeof text === 'string') {
-          setInput((prev) => `${prev}\n[File Content Frame: ${file.name}]\n${text}`.trim());
-        }
-      };
-      reader.readAsText(file);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Upload Failed: Check if storage bucket "trader-logs" is set to Public. ${err.message}`);
+    } finally {
+      setUploadingFile(false);
+      setUploadStatus('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading || uploadingPdf) return;
+    if (!input.trim() || loading || uploadingFile || !sessionId) return;
 
     const userMessage: ChatMessage = { role: 'user', content: input.trim() };
     const updatedMessages = [...messages, userMessage];
@@ -173,6 +273,11 @@ export default function CombinedDashboard() {
     setMessages(updatedMessages);
     setInput('');
     setLoading(true);
+
+    // Instant save user message tracking to Supabase DB
+    await supabase.from('chat_messages').insert([
+      { session_id: sessionId, role: userMessage.role, content: userMessage.content }
+    ]);
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/analyze`, {
@@ -203,19 +308,27 @@ export default function CombinedDashboard() {
         }
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: String(parsedContent).trim(),
-          reasoning_details: parsedReasoning ? String(parsedReasoning).trim() : undefined
-        },
+      const aiMessage: ChatMessage = {
+        role: 'assistant',
+        content: String(parsedContent).trim(),
+        reasoning_details: parsedReasoning ? String(parsedReasoning).trim() : undefined
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+
+      // Instant save AI model response matrix tracking to Supabase DB
+      await supabase.from('chat_messages').insert([
+        { 
+          session_id: sessionId, 
+          role: aiMessage.role, 
+          content: aiMessage.content, 
+          reasoning_details: aiMessage.reasoning_details 
+        }
       ]);
 
     } catch (error) {
       console.error(error);
     } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
       setLoading(false);
     }
   };
@@ -245,20 +358,34 @@ export default function CombinedDashboard() {
           <div>
             <h1 className={`text-md font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>AI TRADE GURU</h1>
             <p className={`text-[9px] font-bold tracking-widest uppercase mt-0.5 ${isDarkMode ? 'text-cyan-400/80' : 'text-slate-400'}`}>
-              Institutional Platform • <span className="text-blue-500 font-extrabold">{selectedModel.name}</span> Active
+              Cloud Matrix Storage • <span className="text-blue-500 font-extrabold">{selectedModel.name}</span> Active
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          className={`p-2 rounded-xl border transition-all flex items-center justify-center shrink-0 ${
-            isDarkMode ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* 🗑️ Clear / Reset Session Button Layout */}
+          <button
+            type="button"
+            onClick={clearChatSession}
+            title="Start New Session"
+            className={`p-2 rounded-xl border transition-all flex items-center justify-center shrink-0 ${
+              isDarkMode ? 'bg-slate-800 border-slate-700 text-red-400 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-red-600 hover:bg-slate-100'
+            }`}
+          >
+            <RefreshCw size={17} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`p-2 rounded-xl border transition-all flex items-center justify-center shrink-0 ${
+              isDarkMode ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
+          </button>
+        </div>
       </header>
 
       {/* Central Chat Feed */}
@@ -292,10 +419,10 @@ export default function CombinedDashboard() {
             </div>
           ))}
 
-          {uploadingPdf && (
-            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-60 font-mono-premium border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-amber-400' : 'bg-white border-slate-200 text-slate-500'}`}>
+          {uploadingFile && (
+            <div className={`flex items-center gap-2.5 text-xs font-semibold px-4 py-3 rounded-xl shadow-sm w-64 font-mono-premium border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-amber-400' : 'bg-white border-slate-200 text-slate-500'}`}>
               <FileText size={14} className="animate-bounce text-amber-500" />
-              <span className="tracking-wide animate-pulse">EXTRACTING PDF MATRIX...</span>
+              <span className="tracking-wide animate-pulse text-[10px] uppercase">{uploadStatus}</span>
             </div>
           )}
 
@@ -305,10 +432,11 @@ export default function CombinedDashboard() {
               <span className="tracking-wide animate-pulse">RUNNING {selectedModel.name.toUpperCase()}...</span>
             </div>
           )}
+          <div ref={chatEndRef} />
         </div>
       </div>
 
-      {/* 🛠️ Compact Professional Footer Control Panel */}
+      {/* 🛠️ Footer Control Panel with Gold VIP Drop-Up Menu Check */}
       <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
       }`}>
@@ -368,11 +496,17 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
-          {/* Action Row Bar */}
+          {/* Action Input Bar Row */}
           <div className="flex items-center gap-2">
-            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.txt,.csv,.json,.log" />
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              onChange={handleFileUpload} 
+              accept=".pdf,.xlsx,.xls,.csv,.txt,.log,.json,.docx" 
+            />
             
-            {/* Attachment Button */}
+            {/* Attachment Trigger */}
             <button 
               type="button" 
               onClick={() => fileInputRef.current?.click()} 
@@ -398,7 +532,7 @@ export default function CombinedDashboard() {
               
               <button 
                 type="button"
-                disabled={loading || !input.trim() || uploadingPdf}
+                disabled={loading || !input.trim() || uploadingFile}
                 onClick={sendMessage}
                 className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${
                   isDarkMode 
