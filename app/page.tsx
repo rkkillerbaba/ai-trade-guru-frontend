@@ -15,7 +15,6 @@ interface AIModel {
   badge: string;
 }
 
-// 🌐 Premium Model Mapping with VIP Short Identifiers (Meta, Hermes Pro & Pro Integrated)
 const AVAILABLE_MODELS: AIModel[] = [
   { name: 'Gemini Pro', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
   { name: 'Meta Pro', id: 'meta-llama/llama-3.3-70b-instruct:free', badge: 'FAST CHAT' },
@@ -157,7 +156,7 @@ export default function CombinedDashboard() {
       reader.onload = (event) => {
         const text = event.target?.result;
         if (typeof text === 'string') {
-          setInput((prev) => `${prev}\n[File Content Frame: ${file.name}]\n${text}`.trim());
+          setInput((prev) => `${prev}\n[File Context Frame: ${file.name}]\n${text}`.trim());
         }
       };
       reader.readAsText(file);
@@ -185,7 +184,7 @@ export default function CombinedDashboard() {
             content: msg.content || "",
             reasoning_details: msg.reasoning_details || null
           })),
-          model_name: selectedModel.id
+          engine_id: selectedModel.id // Updated from model_name to fix protected warnings
         }),
       });
 
@@ -309,13 +308,12 @@ export default function CombinedDashboard() {
         </div>
       </div>
 
-      {/* 🛠️ Compact Professional Footer Control Panel */}
+      {/* Footer Center Action Controller Panel */}
       <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
       }`}>
         <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
           
-          {/* Modern Floating Popover Trigger */}
           <div className="flex items-center justify-between gap-2 px-1 relative" ref={menuRef}>
             <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400 font-mono-premium' : 'text-slate-500'}`}>
               Engine Protocol:
@@ -335,12 +333,10 @@ export default function CombinedDashboard() {
                 <ChevronUp size={12} className={`transform transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* 🔮 Modern Drop-up Popover Drawer with Golden VIP Check Icons */}
+              {/* Modern Popover with Gold Check */}
               {isMenuOpen && (
                 <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md transition-all z-50 ${
-                  isDarkMode 
-                    ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' 
-                    : 'bg-white/95 border-slate-200 text-slate-800'
+                  isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'
                 }`}>
                   <div className="space-y-0.5">
                     {AVAILABLE_MODELS.map((model) => {
@@ -360,7 +356,6 @@ export default function CombinedDashboard() {
                           }`}
                         >
                           <span>{model.name}</span>
-                          {/* 🌟 Pure Gold VIP Check Button Added */}
                           {isSelected && <Check size={13} className="shrink-0 stroke-[3] text-[#d4af37]" />}
                         </button>
                       );
@@ -375,7 +370,6 @@ export default function CombinedDashboard() {
           <div className="flex items-center gap-2">
             <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.txt,.csv,.json,.log" />
             
-            {/* Attachment Button */}
             <button 
               type="button" 
               onClick={() => fileInputRef.current?.click()} 
@@ -398,17 +392,13 @@ export default function CombinedDashboard() {
                     : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
                 }`}
               />
-              
-              {/* Giant Standard Round Touch-Friendly Send Button */}
               <button 
                 type="button"
                 disabled={loading || !input.trim() || uploadingPdf}
                 onClick={sendMessage}
-                className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${
-                  isDarkMode 
-                    ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' 
-                    : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
-                }`}
+                className={`absolute right-2 w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition-all flex items-center justify-center shadow-md ${
+                  isDarkMode ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'bg-slate-900 text-white hover:bg-slate-800'
+                } disabled:opacity-20`}
                 style={{ top: '50%', transform: 'translateY(-50%)' }}
               >
                 <Send size={15} className="stroke-[2.5]" />
