@@ -15,10 +15,9 @@ interface AIModel {
   badge: string;
 }
 
-// 🌐 Stable & Fast Premium Model Mapping (Nvidia updated to Nemotron Ultra)
+// 🌐 Pure Stable Premium Model Selection (Venice Pro Removed Completely)
 const AVAILABLE_MODELS: AIModel[] = [
   { name: 'Gemini Pro', id: 'google/gemma-4-26b-a4b-it:free', badge: 'REASONING' },
-  { name: 'Venice Pro', id: 'venice/uncensored-24b:free', badge: 'FAST CHAT' },
   { name: 'GPT Pro', id: 'openai/gpt-oss-120b:free', badge: 'INTELLLECT' },
   { name: 'GPT Lite', id: 'openai/gpt-oss-20b:free', badge: 'SPEED' },
   { name: 'Nemotron Ultra', id: 'nvidia/nemotron-3-ultra-550b-a55b:free', badge: 'STRATEGY' }
@@ -91,7 +90,6 @@ export default function CombinedDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close drop-up when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -102,7 +100,6 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // PDF JS library injection
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
@@ -337,7 +334,7 @@ export default function CombinedDashboard() {
                 <ChevronUp size={12} className={`transform transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* 🔮 Modern Drop-up Popover Drawer with Golden VIP Check Icons */}
+              {/* 🔮 Drop-up Popover Drawer with Golden VIP Check Icons */}
               {isMenuOpen && (
                 <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md transition-all z-50 ${
                   isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'
@@ -360,7 +357,7 @@ export default function CombinedDashboard() {
                           }`}
                         >
                           <span>{model.name}</span>
-                          {/* 🌟 Gold VIP Check Icon ([#d4af37]) */}
+                          {/* Luxury VIP Gold Check Icon */}
                           {isSelected && <Check size={13} className="shrink-0 stroke-[3] text-[#d4af37]" />}
                         </button>
                       );
@@ -399,7 +396,6 @@ export default function CombinedDashboard() {
                 }`}
               />
               
-              {/* Giant Standard Round Touch-Friendly Send Button */}
               <button 
                 type="button"
                 disabled={loading || !input.trim() || uploadingPdf}
