@@ -124,6 +124,20 @@ export default function CombinedDashboard() {
   const profileRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // 🌟 FIXED: handleLogout Shifted to Top Layer to Prevent Compile Scoping Failures
+  const handleLogout = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('guru_active_session_trader');
+    }
+    setCurrentUser(null);
+    setMessages([]);
+    setSessionId(null);
+    setAuthUsername('');
+    setAuthFullName('');
+    setIsProfileOpen(false);
+    setActiveTab('dashboard');
+  }, []);
+
   // 🔄 Verification Trigger: Load active user data on layout refresh initialization
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -140,6 +154,7 @@ export default function CombinedDashboard() {
     }
   }, []);
 
+  // Added WhatsApp Floating Timestamp Header Label Engine
   const getWhatsAppDateLabel = (dateString?: string) => {
     if (!dateString) return 'TODAY';
     const msgDate = new Date(dateString);
@@ -561,7 +576,6 @@ export default function CombinedDashboard() {
                 </div>
               </div>
 
-              {/* 🌟 FIXED: Output Card Container Background and Shadows Are Fully Dynamic Adapting to Light Theme */}
               <div className={`border p-5 rounded-xl leading-relaxed shadow-sm transition-all duration-200 ${
                 isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-[#f8fafc] border-slate-200'
               }`}>
@@ -586,7 +600,6 @@ export default function CombinedDashboard() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       ) : (
@@ -668,10 +681,7 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
-          {/* Control Input Panel */}
-          <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
-            isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
-          }`}>
+          <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'}`}>
             <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
               
               <div className="flex items-center justify-between gap-2 px-1 relative" ref={menuRef}>
@@ -724,9 +734,7 @@ export default function CombinedDashboard() {
               </div>
 
               {attachedFile && (
-                <div className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border max-w-sm transition-all shadow-sm animate-fadeIn ${
-                  isDarkMode ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
-                }`}>
+                <div className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border max-w-sm transition-all shadow-sm animate-fadeIn ${isDarkMode ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
                   <div className="flex items-center gap-2 truncate">
                     <FileText size={16} className={isDarkMode ? 'text-cyan-400' : 'text-blue-600'} />
                     <span className="text-xs font-bold truncate tracking-tight">{attachedFile.name}</span>
@@ -788,7 +796,6 @@ export default function CombinedDashboard() {
                   </button>
                 </div>
               </div>
-
             </div>
           </footer>
         </div>
