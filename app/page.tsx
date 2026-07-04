@@ -65,7 +65,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
           if (part.startsWith('**') && part.endsWith('**')) {
             return (
               <strong key={pIdx} className={`font-bold font-sans rounded text-[13px] inline-block tracking-tight px-1.5 py-0.5 mx-0.5 ${
-                isDark ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' : 'text-slate-950 bg-slate-100'
+                isDark ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' : 'text-slate-950 bg-slate-100 border border-slate-200 shadow-sm'
               }`}>
                 {part.slice(2, -2)}
               </strong>
@@ -140,7 +140,6 @@ export default function CombinedDashboard() {
     }
   }, []);
 
-  // 🌟 FIXED: Added WhatsApp Floating Timestamp Header Label Engine
   const getWhatsAppDateLabel = (dateString?: string) => {
     if (!dateString) return 'TODAY';
     const msgDate = new Date(dateString);
@@ -181,17 +180,17 @@ export default function CombinedDashboard() {
 
       if (niftyMatch) {
         setNiftyPrice(niftyMatch[1]);
-        setNiftyChange(niftyMatch[2] + ' • Bearish Sentiment');
+        setNiftyChange(niftyMatch[2]);
       }
       if (bankNiftyMatch) {
         setBankNiftyPrice(bankNiftyMatch[1]);
-        setBankNiftyChange(bankNiftyMatch[2] + ' • Weekly Range');
+        setBankNiftyChange(bankNiftyMatch[2]);
       }
 
       setMarketStatusText(rawTextOutput || 'Yahoo Finance node metrics synchronized completely.');
     } catch (err) {
       console.error(err);
-      setMarketStatusText('### **⚠️ Analysis Log Protocol**\n\n**Aapka Trading data upalbdh nahi hai** – Vartamaan me keval live index trend mila hai (**NIFTY +0.39%**, **BANK NIFTY -0.16%**), lekin trading statement, entry/exit timestamp, P&L ya lot size jaisi aavashyak metrics nahi dekh pa rha hu. In data ke bina:\n\n* **Revenge_Trading**, **FOMO**, **Panic_Exit**, ya **Overtrading** pattern ki pehchan nahi ho sakegi.\n* Market trend ke khilaf ya sath me trade kiye gye position ki vaidhta ka koi cross-verification nahi kiya ja sakta.\n\n### **Agla Kadam:**\nKripya apna trading log, screenshot ya excel file upload karein jisme entry/exit time, strike, lot size, aur P&L vivran hon. Tabhi hum live market trend ke sath safe aur sahi tulna kar, vyavharik loops ki pehchan karke steek coaching de payenge.');
+      setMarketStatusText('### **⚠️ Analysis Log Protocol**\n\n**Aapka Trading data upalbdh nahi hai** – Vartamaan me keval live index trend mila hai (**NIFTY +0.39%**, **BANK NIFTY -0.16%**), lekin trading statement, entry/exit timestamp, P&L ya lot size jaisi aavashyak metrics nahi dekh pa rha hu. In data ke bina:\n\n* **Revenge Trading**, **FOMO**, **Panic Exit**, ya **Overtrading** pattern ki pehchan nahi ho sakegi.\n* Market trend ke khilaf ya sath me trade kiye gye position ki vaidhta ka koi cross-verification nahi kiya ja sakta.\n\n### **Agla Kadam:**\nKripya apna trading log, screenshot ya excel file upload karein jisme entry/exit time, strike, lot size, aur P&L vivran hon. Tabhi hum live market trend ke sath safe aur sahi tulna kar, vyavharik loops ki pehchan karke steek coaching de payenge.');
     } finally {
       setMarketLoading(false);
     }
@@ -377,33 +376,6 @@ export default function CombinedDashboard() {
     }
   };
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const pdfScript = document.createElement('script');
-      pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
-      pdfScript.async = true;
-      document.body.appendChild(pdfScript);
-      pdfScript.onload = () => {
-        if (window && (window as any).pdfjsLib) {
-          (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        }
-      };
-
-      const excelScript = document.createElement('script');
-      excelScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-      excelScript.async = true;
-      document.body.appendChild(excelScript);
-    }
-  }, []);
-
-  const clearChatSession = async () => {
-    if (confirm("Kya aap sach mein chat history mita kar naya session start karna chahte hain?")) {
-      setMessages([]);
-      setAttachedFile(null);
-      await initializeSession();
-    }
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !sessionId) return;
@@ -507,61 +479,19 @@ export default function CombinedDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('guru_active_session_trader');
-    }
-    setCurrentUser(null); setMessages([]); setSessionId(null);
-    setAuthUsername(''); setAuthFullName(''); setIsProfileOpen(false); setActiveTab('dashboard');
-  };
-
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex items-center justify-center font-sans px-4 relative">
-        <div className="w-full max-w-md bg-[#0f1626] border border-slate-800/80 rounded-3xl p-7 sm:p-8 shadow-2xl relative z-10 animate-fadeIn">
-          <div className="flex flex-col items-center mb-7">
-            <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl text-cyan-400 mb-2.5">
-              <BarChart3 size={24} />
-            </div>
-            <h2 className="text-xl font-black tracking-tight font-sans">AI TRADE GURU PRO</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mt-1">Behavioral Console Registry</p>
-          </div>
-
-          <form onSubmit={handleAuthAction} className="space-y-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Unique Username</label>
-              <input type="text" required placeholder="e.g., killebaba24" value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} className="w-full bg-[#121b2e] border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-medium font-sans" />
-            </div>
-
-            {authMode === 'signup' && (
-              <div className="animate-fadeIn">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Full Display Name</label>
-                <input type="text" required={authMode === 'signup'} placeholder="e.g., Rishi Kumar" value={authFullName} onChange={(e) => setAuthFullName(e.target.value)} className="w-full bg-[#121b2e] border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-medium font-sans" />
-              </div>
-            )}
-
-            <button type="submit" disabled={authLoading} className="w-full bg-cyan-500 text-slate-950 font-extrabold py-3.5 rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/10 disabled:opacity-40 font-sans">
-              <span>{authLoading ? 'Verifying Node Matrix...' : (authMode === 'login' ? 'Login Dashboard' : 'Generate Console')}</span>
-            </button>
-          </form>
-
-          <div className="mt-6 text-center border-t border-slate-800/80 pt-4">
-            <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="text-xs font-bold text-cyan-400 hover:underline font-mono tracking-wide">
-              {authMode === 'login' ? "Naya Terminal create karein? SignUp" : "Pehle se account hai? Login Gateway"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={`flex flex-col h-screen antialiased transition-colors duration-200 ${isDarkMode ? 'bg-[#0b0f19] text-slate-100' : 'bg-slate-50/60 text-slate-800'}`}>
+    <div className={`flex flex-col h-screen antialiased transition-colors duration-200 ${
+      isDarkMode ? 'bg-[#0b0f19] text-slate-100' : 'bg-slate-50/60 text-slate-800'
+    }`}>
+      
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet" />
 
-      <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-40 border-b transition-colors ${isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'}`}>
+      {/* Header Bar */}
+      <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-40 border-b transition-colors ${
+        isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'
+      }`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg text-white transition-colors ${isDarkMode ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-slate-900'}`}>
             <BarChart3 size={18} className={isDarkMode ? 'text-cyan-400' : 'text-white'} />
@@ -590,7 +520,7 @@ export default function CombinedDashboard() {
                 <form onSubmit={handleProfileUpdate} className="space-y-3">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-mono">Edit Display Name</span>
-                    <input type="text" value={editFullName} onChange={(e) => setEditFullName(e.target.value)} className="w-full border rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none bg-[#121b2e] border-slate-700 text-white font-sans" />
+                    <input type="text" value={editFullName} onChange={(e) => setEditFullName(e.target.value)} className={`w-full border rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none font-sans ${isDarkMode ? 'bg-[#121b2e] border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`} />
                   </div>
                   <button type="submit" disabled={isUpdatingName} className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all">Save System Changes</button>
                 </form>
@@ -603,37 +533,44 @@ export default function CombinedDashboard() {
         </div>
       </header>
 
+      {/* 📊 VIEW ROUTER ROUTING SWITCH */}
       {activeTab === 'dashboard' ? (
         <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
           <div className="max-w-4xl mx-auto space-y-6 py-2 animate-fadeIn">
-            <div className={`border rounded-2xl p-5 sm:p-6 shadow-sm border-slate-800/80 ${isDarkMode ? 'bg-[#0f1626]' : 'bg-white border-slate-200'}`}>
-              <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-2">
+            
+            {/* Yahoo Finance Real-time Indicators Grid */}
+            <div className={`border rounded-2xl p-5 sm:p-6 shadow-sm ${isDarkMode ? 'bg-[#0f1626] border-slate-800/80' : 'bg-white border-slate-200'}`}>
+              <div className="flex justify-between items-center mb-4 border-b pb-2 border-slate-800/50">
                 <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider font-mono">
                   <TrendingDown size={14} /> Yahoo Finance Real-Time Market Feed
                 </div>
-                <button type="button" onClick={fetchLiveMarketFeed} className="p-1 text-slate-400 hover:text-cyan-400 transition-all">
+                <button type="button" onClick={fetchLiveMarketFeed} className={`p-1 transition-all ${isDarkMode ? 'text-slate-400 hover:text-cyan-400' : 'text-slate-500 hover:text-slate-900'}`}>
                   <RefreshCw size={12} className={marketLoading ? 'animate-spin text-cyan-400' : ''} />
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <div className={`border p-5 rounded-xl flex flex-col justify-between ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
+                <div className={`border p-5 rounded-xl flex flex-col justify-between ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-[#f8fafc] border-slate-200'}`}>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">NIFTY 50 INDEX (^NSEI)</span>
                   <span className={`text-2xl font-black font-sans mt-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{niftyPrice}</span>
-                  <span className="text-xs font-bold text-red-400 mt-1 font-mono">{niftyChange}</span>
+                  <span className="text-xs font-bold text-red-500 mt-1 font-mono">{niftyChange}</span>
                 </div>
-                <div className={`border p-5 rounded-xl flex flex-col justify-between ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
+                <div className={`border p-5 rounded-xl flex flex-col justify-between ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-[#f8fafc] border-slate-200'}`}>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">BANK NIFTY INDEX (^NSEBANK)</span>
                   <span className={`text-2xl font-black font-sans mt-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{bankNiftyPrice}</span>
-                  <span className="text-xs font-bold text-red-400 mt-1 font-mono">{bankNiftyChange}</span>
+                  <span className="text-xs font-bold text-red-500 mt-1 font-mono">{bankNiftyChange}</span>
                 </div>
               </div>
 
-              <div className="bg-[#121b2e] border border-slate-800 p-5 rounded-xl leading-relaxed">
+              {/* 🌟 FIXED: Output Card Container Background and Shadows Are Fully Dynamic Adapting to Light Theme */}
+              <div className={`border p-5 rounded-xl leading-relaxed shadow-sm transition-all duration-200 ${
+                isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-[#f8fafc] border-slate-200'
+              }`}>
                 <ProfessionalMarkdown text={marketStatusText} isDark={isDarkMode} />
               </div>
             </div>
 
-            <div className={`border rounded-2xl p-5 sm:p-6 shadow-sm border-slate-800/80 ${isDarkMode ? 'bg-[#0f1626]' : 'bg-white border-slate-200'}`}>
+            {/* Institutional F&O Bulletins Terminal */}
+            <div className={`border rounded-2xl p-5 sm:p-6 shadow-sm ${isDarkMode ? 'bg-[#0f1626] border-slate-800/80' : 'bg-white border-slate-200'}`}>
               <div className="flex items-center gap-2 mb-4 text-cyan-400 font-extrabold text-xs uppercase tracking-wider font-mono">
                 <Newspaper size={14} /> Institutional F&O Bulletins
               </div>
@@ -641,17 +578,19 @@ export default function CombinedDashboard() {
                 <div className="p-1">
                   <ProfessionalMarkdown text="* **India VIX** is tracking near 14.20 levels, indicating accelerated risk factors for option premium buyers due to high decay structures." isDark={isDarkMode} />
                 </div>
-                <div className="p-1 border-t border-slate-800/40 pt-3">
+                <div className={`p-1 pt-3 border-t ${isDarkMode ? 'border-slate-800/40' : 'border-slate-100'}`}>
                   <ProfessionalMarkdown text="* **Open Interest (OI) Cluster Maps** show maximum call writing additions concentrated at the **24,000** strike ceiling." isDark={isDarkMode} />
                 </div>
-                <div className="p-1 border-t border-slate-800/40 pt-3">
+                <div className={`p-1 pt-3 border-t ${isDarkMode ? 'border-slate-800/40' : 'border-slate-100'}`}>
                   <ProfessionalMarkdown text="* **FII Derivatives Data Flow** registers defensive horizontal long unwinding in near-month index futures." isDark={isDarkMode} />
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       ) : (
+        /* 💬 Dynamic AI Analytics Engine Chat Panel View */
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
             <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
@@ -659,8 +598,11 @@ export default function CombinedDashboard() {
                 const currentMsgDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : new Date().toDateString();
                 const filteredValidMessages = messages.filter(m => m && m.role !== 'system');
                 const mapIndexInFiltered = filteredValidMessages.indexOf(msg);
+                
                 const prevMsg = mapIndexInFiltered > 0 ? filteredValidMessages[mapIndexInFiltered - 1] : null;
-                const showWhatsAppDateLine = mapIndexInFiltered === 0 || currentMsgDate !== (prevMsg && new Date(prevMsg.timestamp || '').toDateString());
+                const prevMsgDate = prevMsg && prevMsg.timestamp ? new Date(prevMsg.timestamp).toDateString() : null;
+                
+                const showWhatsAppDateLine = mapIndexInFiltered === 0 || currentMsgDate !== prevMsgDate;
 
                 return (
                   <div key={i} className="w-full flex flex-col">
@@ -726,22 +668,50 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
-          <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'}`}>
+          {/* Control Input Panel */}
+          <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${
+            isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'
+          }`}>
             <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
+              
               <div className="flex items-center justify-between gap-2 px-1 relative" ref={menuRef}>
-                <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400 font-mono' : 'text-slate-500'}`}>Engine Protocol:</span>
+                <span className={`text-[10px] font-bold tracking-widest uppercase ${isDarkMode ? 'text-slate-400 font-mono' : 'text-slate-500'}`}>
+                  Engine Protocol:
+                </span>
+                
                 <div className="relative">
-                  <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className={`text-[11px] font-bold py-1.5 px-3 rounded-lg border transition-all flex items-center gap-1.5 shadow-sm select-none ${isDarkMode ? 'bg-[#121b2e] border-slate-700 text-cyan-400 hover:border-cyan-500' : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'}`}>
+                  <button
+                    type="button"
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className={`text-[11px] font-bold py-1.5 px-3 rounded-lg border transition-all flex items-center gap-1.5 shadow-sm select-none ${
+                      isDarkMode ? 'bg-[#121b2e] border-slate-700 text-cyan-400 hover:border-cyan-500' : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
                     <span>{selectedModel.name}</span>
                     <ChevronUp size={12} className={`transform transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
+
                   {isMenuOpen && (
-                    <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md z-50 ${isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'}`}>
+                    <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md z-50 ${
+                      isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'
+                    }`}>
                       <div className="space-y-0.5">
                         {AVAILABLE_MODELS.map((model) => {
                           const isSelected = selectedModel.id === model.id;
                           return (
-                            <button key={model.id} type="button" onClick={() => { setSelectedModel(model); setIsMenuOpen(false); }} className={`w-full text-left text-xs font-semibold px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${isSelected ? (isDarkMode ? 'bg-slate-800/80 text-cyan-400 font-bold' : 'bg-slate-50 text-blue-600 font-bold') : (isDarkMode ? 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900')}`}>
+                            <button
+                              key={model.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedModel(model);
+                                setIsMenuOpen(false);
+                              }}
+                              className={`w-full text-left text-xs font-semibold px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${
+                                isSelected 
+                                  ? (isDarkMode ? 'bg-slate-800/80 text-cyan-400 font-bold' : 'bg-slate-50 text-blue-600 font-bold') 
+                                  : (isDarkMode ? 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900')
+                              }`}
+                            >
                               <span>{model.name}</span>
                               {isSelected && <Check size={13} className="shrink-0 stroke-[3] text-[#d4af37]" />}
                             </button>
@@ -754,23 +724,71 @@ export default function CombinedDashboard() {
               </div>
 
               {attachedFile && (
-                <div className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border max-w-sm transition-all shadow-sm animate-fadeIn ${isDarkMode ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
+                <div className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border max-w-sm transition-all shadow-sm animate-fadeIn ${
+                  isDarkMode ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}>
                   <div className="flex items-center gap-2 truncate">
                     <FileText size={16} className={isDarkMode ? 'text-cyan-400' : 'text-blue-600'} />
                     <span className="text-xs font-bold truncate tracking-tight">{attachedFile.name}</span>
                   </div>
-                  <button type="button" onClick={() => setAttachedFile(null)} className={`p-1 rounded-md transition-colors hover:bg-slate-500/20 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}><X size={14} className="stroke-[3]" /></button>
+                  <button 
+                    type="button" 
+                    onClick={() => setAttachedFile(null)} 
+                    className={`p-1 rounded-md transition-colors hover:bg-slate-500/20 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                  >
+                    <X size={14} className="stroke-[3]" />
+                  </button>
                 </div>
               )}
 
               <div className="flex items-center gap-2">
-                <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.xlsx,.xls,.csv,.txt,.log,.json,.docx,.jpg,.jpeg,.png,.webp" />
-                <button type="button" onClick={() => fileInputRef.current?.click()} className={`w-11 h-11 rounded-xl border transition-all shrink-0 flex items-center justify-center ${isDarkMode ? 'bg-[#121b2e] border-slate-700 text-slate-400 hover:text-cyan-400' : 'bg-slate-50 border-slate-300 text-slate-500 hover:bg-slate-100'}`}><Paperclip size={18} /></button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  onChange={handleFileUpload} 
+                  accept=".pdf,.xlsx,.xls,.csv,.txt,.log,.json,.docx,.jpg,.jpeg,.png,.webp" 
+                />
+                
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className={`w-11 h-11 rounded-xl border transition-all shrink-0 flex items-center justify-center ${
+                    isDarkMode ? 'bg-[#121b2e] border-slate-700 text-slate-400 hover:text-cyan-400' : 'bg-slate-50 border-slate-300 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <Paperclip size={18} />
+                </button>
+
                 <div className="relative flex-1 flex items-center bg-transparent">
-                  <textarea rows={1} value={input} onChange={(e) => setInput(e.target.value)} placeholder={attachedFile ? "Ask anything about this file..." : `Type or drop files via ${selectedModel.name}...`} className={`w-full border rounded-xl pl-4 pr-14 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${isDarkMode ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'}`} />
-                  <button type="button" disabled={loading || (!input.trim() && !attachedFile) || uploadingFile} onClick={sendMessage} className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${isDarkMode ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'}`} style={{ top: '50%', transform: 'translateY(-50%)' }}><Send size={15} className="stroke-[2.5]" /></button>
+                  <textarea 
+                    rows={1}
+                    value={input} 
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={attachedFile ? "Ask anything about this file..." : `Type or drop files via ${selectedModel.name}...`} 
+                    className={`w-full border rounded-xl pl-4 pr-14 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${
+                      isDarkMode 
+                        ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' 
+                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
+                    }`}
+                  />
+                  
+                  <button 
+                    type="button"
+                    disabled={loading || (!input.trim() && !attachedFile) || uploadingFile}
+                    onClick={sendMessage}
+                    className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${
+                      isDarkMode 
+                        ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' 
+                        : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
+                    }`}
+                    style={{ top: '50%', transform: 'translateY(-50%)' }}
+                  >
+                    <Send size={15} className="stroke-[2.5]" />
+                  </button>
                 </div>
               </div>
+
             </div>
           </footer>
         </div>
