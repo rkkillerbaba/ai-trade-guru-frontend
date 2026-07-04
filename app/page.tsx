@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, ChevronRight, BarChart3, Sun, Moon, Cpu, Sparkles, FileText, ChevronUp, Check, RefreshCw, X, LogIn, UserPlus, LayoutDashboard, MessageSquare, TrendingDown, Newspaper, User } from 'lucide-react';
+import { Send, Paperclip, ChevronRight, BarChart3, Sun, Moon, Cpu, Sparkles, FileText, ChevronUp, Check, RefreshCw, X, LogIn, UserPlus, LayoutDashboard, MessageSquare, TrendingDown, Newspaper, User, Settings, LogOut, Edit3 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -89,12 +89,17 @@ export default function CombinedDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'chat'>('dashboard');
   
-  // 🔐 Authentication States Framework Fixed
+  // 🔐 Authentication & Persistent Session Framework
   const [currentUser, setCurrentUser] = useState<{ username: string; fullName: string } | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authUsername, setAuthUsername] = useState('');
   const [authFullName, setAuthFullName] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+
+  // 👤 Interactive Profile Menu Panel States
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -108,7 +113,24 @@ export default function CombinedDashboard() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // 🔄 Verification Trigger: Load active user data on layout refresh initialization
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const persistedUserSession = localStorage.getItem('guru_active_session_trader');
+      if (persistedUserSession) {
+        try {
+          const parsedUser = JSON.parse(persistedUserSession);
+          setCurrentUser(parsedUser);
+          setEditFullName(parsedUser.fullName);
+        } catch (error) {
+          console.error("Session re-sync pipeline failure log:", error);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -119,12 +141,21 @@ export default function CombinedDashboard() {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
       }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 🔐 Authentication Execution Gateway (Fully Sanitized for Next.js Build Compiler)
+  // Custom regex mapping to fetch only User's First Name
+  const getUserFirstName = (fullNameString: string) => {
+    if (!fullNameString) return 'Trader';
+    return fullNameString.trim().split(' ')[0];
+  };
+
+  // 🔐 Authentication Execution Gateway (Sanitized for Next.js Compiler)
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault();
     const lowerUsername = authUsername.trim().toLowerCase();
@@ -164,7 +195,12 @@ export default function CombinedDashboard() {
           return;
         }
 
-        setCurrentUser({ username: lowerUsername, fullName: cleanFullName });
+        const authenticatedUserData = { username: lowerUsername, fullName: cleanFullName };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('guru_active_session_trader', JSON.stringify(authenticatedUserData));
+        }
+        setCurrentUser(authenticatedUserData);
+        setEditFullName(cleanFullName);
       } else {
         // Login Processing Checks
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/login`, {
@@ -187,13 +223,45 @@ export default function CombinedDashboard() {
           return;
         }
 
-        setCurrentUser({ username: data.username, fullName: data.full_name });
+        const authenticatedUserData = { username: data.username, fullName: data.full_name };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('guru_active_session_trader', JSON.stringify(authenticatedUserData));
+        }
+        setCurrentUser(authenticatedUserData);
+        setEditFullName(data.full_name);
       }
     } catch (err: any) {
       console.error(err);
       alert(`Connection routing block: ${err.message}`);
     } finally {
       setAuthLoading(false);
+    }
+  };
+
+  // 📝 Dynamic Dashboard Profile Data Synchronization Update
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !editFullName.trim()) return;
+
+    setIsUpdatingName(true);
+    try {
+      const { error: patchError } = await supabase
+        .from('trader_users')
+        .update({ full_name: editFullName.trim() })
+        .eq('username', currentUser.username);
+
+      if (patchError) throw patchError;
+
+      const customizedUserObj = { ...currentUser, fullName: editFullName.trim() };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('guru_active_session_trader', JSON.stringify(customizedUserObj));
+      }
+      setCurrentUser(customizedUserObj);
+      alert("Aapka profile data successfully sync ho gaya hai bhai!");
+    } catch (err: any) {
+      alert(`Sync process halted: ${err.message}`);
+    } finally {
+      setIsUpdatingName(false);
     }
   };
 
@@ -240,7 +308,6 @@ export default function CombinedDashboard() {
     if (localSessionId) {
       setSessionId(localSessionId);
       
-      // Fetching old historical records specific to this user account node mapping
       const { data: history, error: historyError } = await supabase
         .from('chat_messages')
         .select('role, content, reasoning_details, created_at')
@@ -420,11 +487,15 @@ export default function CombinedDashboard() {
   };
 
   const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('guru_active_session_trader');
+    }
     setCurrentUser(null);
     setMessages([]);
     setSessionId(null);
     setAuthUsername('');
     setAuthFullName('');
+    setIsProfileOpen(false);
     setActiveTab('dashboard');
   };
 
@@ -501,8 +572,8 @@ export default function CombinedDashboard() {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-      {/* Header Bar */}
-      <header className={`px-4 py-3 sm:px-6 flex justify-between items-center relative z-10 border-b transition-colors ${
+      {/* 🚀 Customized User Friendly Header Bar */}
+      <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-40 border-b transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'
       }`}>
         <div className="flex items-center gap-3">
@@ -510,18 +581,18 @@ export default function CombinedDashboard() {
             <BarChart3 size={18} className={isDarkMode ? 'text-cyan-400' : 'text-white'} />
           </div>
           <div>
-            <h1 className="text-sm font-black tracking-tight">AI TRADE GURU</h1>
-            <p className="text-[9px] font-bold tracking-wider text-slate-400 mt-0.5 flex items-center gap-1 font-mono uppercase">
-              <User size={10} className="text-cyan-400" /> Active: <span className="text-cyan-400">{currentUser.fullName}</span>
+            <h1 className="text-xs sm:text-sm font-black tracking-tight uppercase">AI Guru</h1>
+            <p className="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase mt-0.5">
+              Hello, <span className="text-cyan-400 font-black">{getUserFirstName(currentUser.fullName)}</span> 👋
             </p>
           </div>
         </div>
 
-        {/* 📊 Navigation Tab Controller Layer */}
+        {/* 📊 Navigation & Profile Integration Container */}
         <div className="flex items-center gap-2">
           <button 
             type="button" 
-            onClick={() => setActiveTab('dashboard')} 
+            onClick={() => { setActiveTab('dashboard'); setIsProfileOpen(false); }} 
             className={`px-3 py-1.5 rounded-xl border text-xs font-bold font-mono uppercase tracking-tight transition-all flex items-center gap-1.5 ${
               activeTab === 'dashboard' 
                 ? 'bg-cyan-500 text-slate-950 border-cyan-500 shadow-md' 
@@ -533,7 +604,7 @@ export default function CombinedDashboard() {
           
           <button 
             type="button" 
-            onClick={() => setActiveTab('chat')} 
+            onClick={() => { setActiveTab('chat'); setIsProfileOpen(false); }} 
             className={`px-3 py-1.5 rounded-xl border text-xs font-bold font-mono uppercase tracking-tight transition-all flex items-center gap-1.5 ${
               activeTab === 'chat' 
                 ? 'bg-cyan-500 text-slate-950 border-cyan-500 shadow-md' 
@@ -545,14 +616,77 @@ export default function CombinedDashboard() {
 
           <button
             type="button"
-            onClick={handleLogout}
-            title="Log Out Console"
-            className={`p-2 rounded-xl border font-mono text-[10px] font-bold transition-all uppercase ${
-              isDarkMode ? 'bg-slate-800 border-slate-700 text-red-400 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-red-50'
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`p-2 rounded-xl border transition-all flex items-center justify-center shrink-0 ${
+              isDarkMode ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
             }`}
           >
-            Exit
+            {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
           </button>
+
+          {/* 👤 Profile Icon Panel Dropdown Trigger */}
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              className={`p-2 rounded-xl border transition-all flex items-center justify-center shrink-0 ${
+                isProfileOpen 
+                  ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400 shadow-sm' 
+                  : (isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100')
+              }`}
+            >
+              <Settings size={15} className={isProfileOpen ? 'animate-spin' : ''} />
+            </button>
+
+            {/* 👤 Visual Form Dropdown for Updating Profile Information & Safe Logout */}
+            {isProfileOpen && (
+              <div className={`absolute right-0 mt-2.5 w-64 rounded-2xl border p-4 shadow-2xl backdrop-blur-md z-50 animate-fadeIn ${
+                isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'
+              }`}>
+                <div className="border-b border-slate-800/60 pb-2.5 mb-3">
+                  <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block">Terminal Node Profile</span>
+                  <span className="text-xs font-mono font-bold text-cyan-400">@{currentUser.username}</span>
+                </div>
+
+                <form onSubmit={handleProfileUpdate} className="space-y-3">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-mono">Edit Display Name</span>
+                    <div className="relative flex items-center">
+                      <input 
+                        type="text"
+                        value={editFullName}
+                        onChange={(e) => setEditFullName(e.target.value)}
+                        className={`w-full border rounded-lg pl-3 pr-8 py-1.5 text-xs font-medium focus:outline-none ${
+                          isDarkMode ? 'bg-[#121b2e] border-slate-700 text-white focus:border-cyan-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500'
+                        }`}
+                      />
+                      <Edit3 size={11} className="absolute right-2.5 text-slate-500" />
+                    </div>
+                  </div>
+                  
+                  <button
+                    type="submit"
+                    disabled={isUpdatingName || !editFullName.trim() || editFullName.trim() === currentUser.fullName}
+                    className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all shadow-md disabled:opacity-30"
+                  >
+                    {isUpdatingName ? 'Syncing...' : 'Save System Changes'}
+                  </button>
+                </form>
+
+                {/* 🔐 Safe Logout Button Inside Dropdown Profile Block Only */}
+                <div className="border-t border-slate-800/60 mt-4 pt-3">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <LogOut size={12} />
+                    <span>Exit Console Session</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
