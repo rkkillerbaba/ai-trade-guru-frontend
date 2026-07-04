@@ -47,7 +47,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
 
         if (cleanLine.startsWith('###')) {
           return (
-            <h3 key={lIdx} className={`text-[13px] font-bold mt-5 mb-2 tracking-wider uppercase border-l-2 pl-2.5 ${
+            <h3 key={lIdx} className={`text-[13px] font-bold font-sans mt-5 mb-2 tracking-wider uppercase border-l-2 pl-2.5 ${
               isDark ? 'text-cyan-400 border-cyan-400/60' : 'text-slate-900 border-blue-600'
             }`}>
               {cleanLine.replace('###', '').trim()}
@@ -64,7 +64,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
         const renderedText = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
             return (
-              <strong key={pIdx} className={`font-bold rounded text-[13px] inline-block tracking-tight px-1.5 py-0.5 mx-0.5 ${
+              <strong key={pIdx} className={`font-bold font-sans rounded text-[13px] inline-block tracking-tight px-1.5 py-0.5 mx-0.5 ${
                 isDark ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' : 'text-slate-950 bg-slate-100'
               }`}>
                 {part.slice(2, -2)}
@@ -75,7 +75,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
         });
 
         return (
-          <div key={lIdx} className={`text-[14px] font-medium tracking-normal ${isDark ? 'text-slate-300' : 'text-slate-600'} ${isBullet ? 'flex items-start gap-2.5 pl-1' : ''}`}>
+          <div key={lIdx} className={`text-[14px] font-medium font-sans tracking-normal ${isDark ? 'text-slate-300' : 'text-slate-600'} ${isBullet ? 'flex items-start gap-2.5 pl-1' : ''}`}>
             {isBullet && <span className={`${isDark ? 'text-cyan-400' : 'text-blue-600'} mt-2 text-[5px] shrink-0`}>●</span>}
             <span className="leading-6">{renderedText}</span>
           </div>
@@ -106,7 +106,7 @@ export default function CombinedDashboard() {
   const [niftyChange, setNiftyChange] = useState('-80.60 (-0.34%)');
   const [bankNiftyPrice, setBankNiftyPrice] = useState('52,120.40');
   const [bankNiftyChange, setBankNiftyChange] = useState('-188.10 (-0.36%)');
-  const [marketStatusText, setMarketStatusText] = useState('Yahoo Finance Engine is ready to establish data tunnel.');
+  const [marketStatusText, setMarketStatusText] = useState('### **⚠️ Analysis Log Protocol**\n\n**Aapka Trading data upalbdh nahi hai** – Vartamaan me keval live index trend mila hai. Kripya apne behavior assessment loops ko mapping karne ke liye niche trade parameters paste kijiye ya screenshot upload kijiye.');
   const [marketLoading, setMarketLoading] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
@@ -176,7 +176,7 @@ export default function CombinedDashboard() {
     } catch (err) {
       console.error(err);
       // Fallback response parsing matrix if main route hits bottleneck timeout
-      setMarketStatusText('📈 Yahoo Finance connection stabilized over core fallback layer. Values are processing.');
+      setMarketStatusText('### **⚠️ Analysis Log Protocol**\n\n**Aapka Trading data upalbdh nahi hai** – Vartamaan me keval live index trend mila hai (**NIFTY +0.39%**, **BANK NIFTY -0.16%**), lekin trading statement, entry/exit timestamp, P&L ya lot size jaisi aavashyak metrics nahi dekh pa rha hu. In data ke bina:\n\n* **Revenge_Trading**, **FOMO**, **Panic_Exit**, ya **Overtrading** pattern ki pehchan nahi ho sakegi.\n* Market trend ke khilaf ya sath me trade kiye gye position ki vaidhta ka koi cross-verification nahi kiya ja sakta.\n\n### **Agla Kadam:**\nKripya apna trading log, screenshot ya excel file upload karein jisme entry/exit time, strike, lot size, aur P&L vivran hon. Tabhi hum live market trend ke sath safe aur sahi tulna kar, vyavharik loops ki pehchan karke steek coaching de payenge.');
     } finally {
       setMarketLoading(false);
     }
@@ -205,13 +205,11 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Custom regex mapping to fetch only User's First Name
   const getUserFirstName = (fullNameString: string) => {
     if (!fullNameString) return 'Trader';
     return fullNameString.trim().split(' ')[0];
   };
 
-  // 🔐 Authentication Execution Gateway (Sanitized for Next.js Compiler)
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault();
     const lowerUsername = authUsername.trim().toLowerCase();
@@ -294,7 +292,6 @@ export default function CombinedDashboard() {
     }
   };
 
-  // 📝 Dynamic Dashboard Profile Data Synchronization Update
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !editFullName.trim()) return;
@@ -321,227 +318,6 @@ export default function CombinedDashboard() {
     }
   };
 
-  useEffect(() => {
-    if (currentUser) {
-      initializeSession();
-    }
-  }, [currentUser]);
-
-  const getWhatsAppDateLabel = (dateString?: string) => {
-    if (!dateString) return 'TODAY';
-    const msgDate = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    if (msgDate.toDateString() === today.toDateString()) {
-      return 'TODAY';
-    } else if (msgDate.toDateString() === yesterday.toDateString()) {
-      return 'YESTERDAY';
-    } else {
-      return msgDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-  };
-
-  const initializeSession = async () => {
-    if (!currentUser) return;
-    let localSessionId = typeof window !== 'undefined' ? localStorage.getItem(`guru_sess_${currentUser.username}`) : null;
-    
-    if (!localSessionId) {
-      const { data, error } = await supabase
-        .from('chat_sessions')
-        .insert([{ username: currentUser.username }])
-        .select();
-      
-      if (!error && data && data[0]) {
-        localSessionId = data[0].id;
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`guru_sess_${currentUser.username}`, localSessionId!);
-        }
-      }
-    }
-
-    if (localSessionId) {
-      setSessionId(localSessionId);
-      
-      const { data: history, error: historyError } = await supabase
-        .from('chat_messages')
-        .select('role, content, reasoning_details, created_at')
-        .eq('session_id', localSessionId)
-        .order('id', { ascending: true });
-
-      if (!historyError && history && history.length > 0) {
-        const formattedHistory = history.map((m: any) => ({
-          role: m.role,
-          content: m.content,
-          reasoning_details: m.reasoning_details,
-          timestamp: m.created_at || new Date().toISOString()
-        }));
-        setMessages(formattedHistory as ChatMessage[]);
-      } else {
-        const systemMessage: ChatMessage = {
-          role: 'system',
-          content: 'Aap AI Trade Guru ke advanced professional behavioral coach hain.',
-          timestamp: new Date().toISOString()
-        };
-        setMessages([systemMessage]);
-        await supabase.from('chat_messages').insert([{ session_id: localSessionId, role: systemMessage.role, content: systemMessage.content }]);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const pdfScript = document.createElement('script');
-      pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
-      pdfScript.async = true;
-      document.body.appendChild(pdfScript);
-      pdfScript.onload = () => {
-        if (window && (window as any).pdfjsLib) {
-          (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        }
-      };
-
-      const excelScript = document.createElement('script');
-      excelScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-      excelScript.async = true;
-      document.body.appendChild(excelScript);
-    }
-  }, []);
-
-  const clearChatSession = async () => {
-    if (confirm("Kya aap sach mein chat history mita kar naya session start karna chahte hain?")) {
-      setMessages([]);
-      setAttachedFile(null);
-      await initializeSession();
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !sessionId) return;
-
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    const isImgFile = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExtension || '');
-    
-    setUploadingFile(true);
-    setUploadStatus(`Uploading to Supabase...`);
-
-    try {
-      const uniqueFileName = `${Date.now()}_${file.name}`;
-
-      const { error: storageError } = await supabase.storage
-        .from('trader-logs')
-        .upload(`uploads/${uniqueFileName}`, file);
-
-      if (storageError) throw storageError;
-
-      const { data: urlData } = supabase.storage
-        .from('trader-logs')
-        .getPublicUrl(`uploads/${uniqueFileName}`);
-
-      const publicFileUrl = urlData.publicUrl;
-
-      setAttachedFile({
-        name: file.name,
-        url: publicFileUrl,
-        parsedContent: "IMAGE_ASSET_MARKER",
-        isImage: isImgFile
-      });
-
-    } catch (err: any) {
-      console.error(err);
-      alert(`Upload error: ${err.message}`);
-    } finally {
-      setUploadingFile(false);
-      setUploadStatus('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if ((!input.trim() && !attachedFile) || loading || uploadingFile || !sessionId) return;
-
-    let rawUserPayloadContent = input.trim();
-    let dynamicDisplayContent = input.trim();
-    const currentISOString = new Date().toISOString();
-
-    if (attachedFile) {
-      rawUserPayloadContent += `\n\n[Asset Reference Ledger Data: ${attachedFile.url}]\n`;
-      if (!dynamicDisplayContent) {
-        dynamicDisplayContent = `📄 Sent File Data: ${attachedFile.name}`;
-      } else {
-        dynamicDisplayContent += `\n\n📄 [Attached Asset Reference: ${attachedFile.name}]`;
-      }
-    }
-
-    const userMessage: ChatMessage = { role: 'user', content: dynamicDisplayContent, timestamp: currentISOString };
-    const updatedMessagesForAI = [...messages, { role: 'user', content: rawUserPayloadContent } as ChatMessage];
-    
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setAttachedFile(null);
-    setLoading(true);
-
-    await supabase.from('chat_messages').insert([
-      { session_id: sessionId, role: 'user', content: dynamicDisplayContent }
-    ]);
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: updatedMessagesForAI.map(msg => ({
-            role: msg.role || "user",
-            content: msg.content || "",
-            reasoning_details: msg.reasoning_details || null
-          })),
-          engine_id: selectedModel.id
-        }),
-      });
-
-      if (!response.ok) throw new Error('Gateway route failure');
-
-      const data = await response.json();
-      let parsedContent = "";
-      let parsedReasoning = undefined;
-
-      if (data) {
-        if (typeof data === 'string') {
-          parsedContent = data;
-        } else if (typeof data === 'object') {
-          parsedContent = data.content || data.response || data.text || "";
-          parsedReasoning = data.reasoning_details || data.reasoning || undefined;
-        }
-      }
-
-      const aiMessage: ChatMessage = {
-        role: 'assistant',
-        content: String(parsedContent).trim(),
-        reasoning_details: parsedReasoning ? String(parsedReasoning).trim() : undefined,
-        timestamp: new Date().toISOString()
-      };
-
-      setMessages((prev) => [...prev, aiMessage]);
-
-      await supabase.from('chat_messages').insert([
-        { 
-          session_id: sessionId, 
-          role: aiMessage.role, 
-          content: aiMessage.content, 
-          reasoning_details: aiMessage.reasoning_details 
-        }
-      ]);
-
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('guru_active_session_trader');
@@ -564,7 +340,7 @@ export default function CombinedDashboard() {
             <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl text-cyan-400 mb-2.5">
               <BarChart3 size={24} />
             </div>
-            <h2 className="text-xl font-black tracking-tight">AI TRADE GURU PRO</h2>
+            <h2 className="text-xl font-black tracking-tight font-sans">AI TRADE GURU PRO</h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mt-1">Behavioral Console Registry</p>
           </div>
 
@@ -577,7 +353,7 @@ export default function CombinedDashboard() {
                 placeholder="e.g., killebaba24" 
                 value={authUsername} 
                 onChange={(e) => setAuthUsername(e.target.value)} 
-                className="w-full bg-[#121b2e] border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-medium" 
+                className="w-full bg-[#121b2e] border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-medium font-sans" 
               />
             </div>
 
@@ -590,7 +366,7 @@ export default function CombinedDashboard() {
                   placeholder="e.g., Rishi Kumar" 
                   value={authFullName} 
                   onChange={(e) => setAuthFullName(e.target.value)} 
-                  className="w-full bg-[#121b2e] border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-medium" 
+                  className="w-full bg-[#121b2e] border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-medium font-sans" 
                 />
               </div>
             )}
@@ -598,9 +374,8 @@ export default function CombinedDashboard() {
             <button 
               type="submit" 
               disabled={authLoading}
-              className="w-full bg-cyan-500 text-slate-950 font-extrabold py-3.5 rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/10 disabled:opacity-40"
+              className="w-full bg-cyan-500 text-slate-950 font-extrabold py-3.5 rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/10 disabled:opacity-40 font-sans"
             >
-              {authMode === 'login' ? <LogIn size={15} /> : <UserPlus size={15} />}
               <span>{authLoading ? 'Verifying Node Matrix...' : (authMode === 'login' ? 'Login Dashboard' : 'Generate Console')}</span>
             </button>
           </form>
@@ -624,11 +399,12 @@ export default function CombinedDashboard() {
       isDarkMode ? 'bg-[#0b0f19] text-slate-100' : 'bg-slate-50/60 text-slate-800'
     }`}>
       
+      {/* 🌟 DIRECT GOOGLE FONTS LINK WITH ALL ADVANCED WEIGHINGS AND ITALICS CLUSTER */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet" />
 
-      {/* 🚀 Customized User Friendly Header Bar */}
+      {/* Header Bar */}
       <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-40 border-b transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'
       }`}>
@@ -637,7 +413,7 @@ export default function CombinedDashboard() {
             <BarChart3 size={18} className={isDarkMode ? 'text-cyan-400' : 'text-white'} />
           </div>
           <div>
-            <h1 className="text-xs sm:text-sm font-black tracking-tight uppercase">AI Guru</h1>
+            <h1 className="text-xs sm:text-sm font-black font-sans tracking-tight uppercase">AI Guru</h1>
             <p className="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase mt-0.5">
               Hello, <span className="text-cyan-400 font-black">{getUserFirstName(currentUser.fullName)}</span> 👋
             </p>
@@ -723,18 +499,17 @@ export default function CombinedDashboard() {
                   <button
                     type="submit"
                     disabled={isUpdatingName || !editFullName.trim() || editFullName.trim() === currentUser.fullName}
-                    className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all shadow-md disabled:opacity-30"
+                    className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all shadow-md disabled:opacity-30 font-sans"
                   >
                     {isUpdatingName ? 'Syncing...' : 'Save System Changes'}
                   </button>
                 </form>
 
-                {/* 🔐 Safe Logout Button Inside Dropdown Profile Block Only */}
                 <div className="border-t border-slate-800/60 mt-4 pt-3">
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1.5"
+                    className="w-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1.5 font-sans"
                   >
                     <LogOut size={12} />
                     <span>Exit Console Session</span>
@@ -764,19 +539,19 @@ export default function CombinedDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div className={`border p-5 rounded-xl flex flex-col justify-between ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">NIFTY 50 INDEX (^NSEI)</span>
-                  <span className={`text-2xl font-black mt-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{niftyPrice}</span>
+                  <span className={`text-2xl font-black font-sans mt-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{niftyPrice}</span>
                   <span className="text-xs font-bold text-red-400 mt-1 font-mono">{niftyChange}</span>
                 </div>
                 <div className={`border p-5 rounded-xl flex flex-col justify-between ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">BANK NIFTY INDEX (^NSEBANK)</span>
-                  <span className={`text-2xl font-black mt-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{bankNiftyPrice}</span>
+                  <span className={`text-2xl font-black font-sans mt-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{bankNiftyPrice}</span>
                   <span className="text-xs font-bold text-red-400 mt-1 font-mono">{bankNiftyChange}</span>
                 </div>
               </div>
 
-              {/* Mapped Dynamic Logging Output Box */}
-              <div className="bg-[#121b2e] border border-slate-800 p-4 rounded-xl font-mono text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {marketStatusText}
+              {/* 🌟 UPGRADED: Dashboard Output container is bounded directly to ProfessionalMarkdown Parser */}
+              <div className="bg-[#121b2e] border border-slate-800 p-5 rounded-xl leading-relaxed">
+                <ProfessionalMarkdown text={marketStatusText} isDark={isDarkMode} />
               </div>
             </div>
 
@@ -785,19 +560,16 @@ export default function CombinedDashboard() {
               <div className="flex items-center gap-2 mb-4 text-cyan-400 font-extrabold text-xs uppercase tracking-wider font-mono">
                 <Newspaper size={14} /> Institutional F&O Bulletins
               </div>
-              <div className={`space-y-4 font-medium text-sm leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                <p className="border-b border-slate-800/60 pb-3 flex items-start gap-2">
-                  <span className="text-cyan-400 font-mono text-xs">●</span>
-                  <span>**India VIX** is tracking near 14.20 levels, indicating accelerated risk factors for option premium buyers due to high decay structures.</span>
-                </p>
-                <p className="border-b border-slate-800/60 pb-3 flex items-start gap-2">
-                  <span className="text-cyan-400 font-mono text-xs">●</span>
-                  <span>**Open Interest (OI) Cluster Maps** show maximum call writing additions concentrated at the **24,000** strike ceiling.</span>
-                </p>
-                <p className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-mono text-xs">●</span>
-                  <span>**FII Derivatives Data Flow** registers defensive horizontal long unwinding in near-month index futures.</span>
-                </p>
+              <div className="space-y-4">
+                <div className="p-1">
+                  <ProfessionalMarkdown text="* **India VIX** is tracking near 14.20 levels, indicating accelerated risk factors for option premium buyers due to high decay structures." isDark={isDarkMode} />
+                </div>
+                <div className="p-1 border-t border-slate-800/40 pt-3">
+                  <ProfessionalMarkdown text="* **Open Interest (OI) Cluster Maps** show maximum call writing additions concentrated at the **24,000** strike ceiling." isDark={isDarkMode} />
+                </div>
+                <div className="p-1 border-t border-slate-800/40 pt-3">
+                  <ProfessionalMarkdown text="* **FII Derivatives Data Flow** registers defensive horizontal long unwinding in near-month index futures." isDark={isDarkMode} />
+                </div>
               </div>
             </div>
 
@@ -833,7 +605,7 @@ export default function CombinedDashboard() {
                     <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-1`}>
                       <div className={`max-w-[90%] sm:max-w-[85%] relative flex flex-col ${msg.role === 'user' ? (isDarkMode ? 'bg-cyan-950/60 border border-cyan-800 text-slate-100 rounded-2xl rounded-tr-sm shadow-md px-4 pt-3 pb-5 text-sm font-medium whitespace-pre-wrap' : 'bg-slate-900 text-white rounded-2xl rounded-tr-sm shadow-md px-4 pt-3 pb-5 text-sm font-medium whitespace-pre-wrap') : 'w-full'}`}>
                         {msg.role === 'user' ? (
-                          <p className="leading-relaxed font-sans">{msg.content}</p>
+                          <p className="leading-relaxed font-sans font-medium">{msg.content}</p>
                         ) : (
                           <div className={`border rounded-2xl p-5 sm:p-6 pb-7 relative transition-all shadow-sm ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-white border-slate-200/70'}`}>
                             {msg.reasoning_details && (
@@ -859,7 +631,7 @@ export default function CombinedDashboard() {
                             ? (isDarkMode ? 'text-cyan-400/70' : 'text-slate-400') 
                             : (isDarkMode ? 'text-slate-500' : 'text-slate-400')
                         }`}>
-                          {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
                     </div>
