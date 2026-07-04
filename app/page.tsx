@@ -40,14 +40,14 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
   const lines = text.split('\n');
   
   return (
-    <div className={`space-y-3.5 leading-relaxed font-sans antialiased ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+    <div className={`space-y-3.5 leading-relaxed font-sans antialiased ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
       {lines.map((line, lIdx) => {
         let cleanLine = line.trim();
         if (!cleanLine) return <div key={lIdx} className="h-1.5" />;
 
         if (cleanLine.startsWith('###')) {
           return (
-            <h3 key={lIdx} className={`text-[13px] font-bold font-sans mt-5 mb-2 tracking-wider uppercase border-l-2 pl-2.5 ${
+            <h3 key={lIdx} className={`text-[13px] font-bold font-sans mt-5 mb-2 tracking-wider uppercase border-l-2 lod-border pl-2.5 ${
               isDark ? 'text-cyan-400 border-cyan-400/60' : 'text-slate-900 border-blue-600'
             }`}>
               {cleanLine.replace('###', '').trim()}
@@ -65,7 +65,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
           if (part.startsWith('**') && part.endsWith('**')) {
             return (
               <strong key={pIdx} className={`font-bold rounded text-[13px] inline-block tracking-tight px-1.5 py-0.5 mx-0.5 ${
-                isDark ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' : 'text-slate-950 bg-slate-100'
+                isDark ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' : 'text-slate-950 bg-slate-100 border border-slate-200 shadow-sm'
               }`}>
                 {part.slice(2, -2)}
               </strong>
@@ -75,7 +75,7 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
         });
 
         return (
-          <div key={lIdx} className={`text-[14px] font-medium font-sans tracking-normal ${isDark ? 'text-slate-300' : 'text-slate-600'} ${isBullet ? 'flex items-start gap-2.5 pl-1' : ''}`}>
+          <div key={lIdx} className={`text-[14px] font-medium font-sans tracking-normal ${isDark ? 'text-slate-300' : 'text-slate-700'} ${isBullet ? 'flex items-start gap-2.5 pl-1' : ''}`}>
             {isBullet && <span className={`${isDark ? 'text-cyan-400' : 'text-blue-600'} mt-2 text-[5px] shrink-0`}>●</span>}
             <span className="leading-6">{renderedText}</span>
           </div>
@@ -159,8 +159,10 @@ export default function CombinedDashboard() {
   }, []);
 
   useEffect(() => {
-    if (isClientMounted) {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isClientMounted && messages.length > 0) {
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
     }
   }, [messages, isClientMounted]);
 
@@ -456,7 +458,6 @@ export default function CombinedDashboard() {
     }
   };
 
-  // 🌟 BULLETPROOFED SEND MESSAGE PIPELINE: SANITIZED OBJECT STRUCTS & SAFE ENVD ROUTING
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!input.trim() && !attachedFile) || loading || uploadingFile || !sessionId) return;
@@ -476,11 +477,13 @@ export default function CombinedDashboard() {
 
     const userMessage: ChatMessage = { role: 'user', content: dynamicDisplayContent, timestamp: currentISOString };
     
-    // Clear out extra systems parameters safely before array submission mapping loops
-    const updatedMessagesForAI = messages.filter(m => m && m.content).map(msg => ({
-      role: msg.role === 'system' ? 'user' : msg.role, 
-      content: msg.content
-    }));
+    // 🌟 FIXED: Sanitized message mapping array layer to prevent index breaks
+    const updatedMessagesForAI = messages
+      .filter(m => m && m.content && m.role !== 'system')
+      .map(msg => ({
+        role: msg.role, 
+        content: msg.content
+      }));
     
     updatedMessagesForAI.push({ role: 'user', content: rawUserPayloadContent });
     
@@ -582,7 +585,6 @@ export default function CombinedDashboard() {
       isDarkMode ? 'bg-[#0b0f19] text-slate-100' : 'bg-slate-50/60 text-slate-800'
     }`}>
       
-      {/* Header Bar */}
       <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-40 border-b transition-colors ${isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'}`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg text-white transition-colors ${isDarkMode ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-slate-900'}`}>
@@ -614,7 +616,7 @@ export default function CombinedDashboard() {
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-mono">Edit Display Name</span>
                     <input type="text" value={editFullName} onChange={(e) => setEditFullName(e.target.value)} className={`w-full border rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none font-sans ${isDarkMode ? 'bg-[#121b2e] border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`} />
                   </div>
-                  <button type="submit" disabled={isUpdatingName} className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all">Save System Changes</button>
+                  <button type="submit" disabled={isUpdatingName} className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all shadow-md">Save System Changes</button>
                 </form>
                 <div className="border-t border-slate-800/60 mt-4 pt-3">
                   <button type="button" onClick={handleLogout} className="w-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1.5 font-sans"><LogOut size={12} /><span>Exit Console Session</span></button>
@@ -680,10 +682,11 @@ export default function CombinedDashboard() {
           </div>
         </div>
       ) : (
+        /* 💬 🌟 FIXED: Chat View Area Renders Explicitly Without Null Break Blocks */
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
             <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
-              {messages.filter(m => m && m.role !== 'system').map((msg, i) => {
+              {messages && messages.filter(m => m && m.role !== 'system').map((msg, i) => {
                 const currentMsgDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : new Date().toDateString();
                 const filteredValidMessages = messages.filter(m => m && m.role !== 'system');
                 const mapIndexInFiltered = filteredValidMessages.indexOf(msg);
@@ -698,7 +701,7 @@ export default function CombinedDashboard() {
                     {showWhatsAppDateLine && (
                       <div className="flex justify-center my-4 select-none animate-fadeIn">
                         <span className={`text-[10px] font-bold px-3 py-1 rounded-md shadow-sm tracking-wider uppercase border font-mono ${
-                          isDarkMode ? 'bg-slate-900/90 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                          isDarkMode ? 'bg-slate-900/90 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
                         }`}>
                           {getWhatsAppDateLabel(msg.timestamp)}
                         </span>
@@ -708,7 +711,7 @@ export default function CombinedDashboard() {
                     <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-1`}>
                       <div className={`max-w-[90%] sm:max-w-[85%] relative flex flex-col ${msg.role === 'user' ? (isDarkMode ? 'bg-cyan-950/60 border border-cyan-800 text-slate-100 rounded-2xl rounded-tr-sm shadow-md px-4 pt-3 pb-5 text-sm font-medium whitespace-pre-wrap' : 'bg-slate-900 text-white rounded-2xl rounded-tr-sm shadow-md px-4 pt-3 pb-5 text-sm font-medium whitespace-pre-wrap') : 'w-full'}`}>
                         {msg.role === 'user' ? (
-                          <p className="leading-relaxed font-sans font-medium">{msg.content}</p>
+                          <p className="leading-relaxed font-sans">{msg.content}</p>
                         ) : (
                           <div className={`border rounded-2xl p-5 sm:p-6 pb-7 relative transition-all shadow-sm ${isDarkMode ? 'bg-[#121b2e] border-slate-800' : 'bg-white border-slate-200/70'}`}>
                             {msg.reasoning_details && (
@@ -717,7 +720,7 @@ export default function CombinedDashboard() {
                                   <span className="flex items-center gap-1.5 font-mono text-[11px]"><Cpu size={13} /> Process Step Engine Mapping</span>
                                   <ChevronRight size={14} />
                                 </summary>
-                                <div className={`px-4 pb-4 pt-2 font-mono text-[11px] border-t whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto ${isDarkMode ? 'text-slate-400 border-slate-800 bg-[#0f1626]' : 'text-slate-500 border-slate-100 bg-slate-50/50'}`}>
+                                <div className={`px-4 pb-4 pt-2 font-mono text-[11px] border-t whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto ${isDarkMode ? 'text-slate-400 border-slate-800 bg-[#0f1626]' : 'text-slate-600 border-slate-100 bg-slate-50/50'}`}>
                                   {msg.reasoning_details}
                                 </div>
                               </details>
@@ -757,6 +760,7 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
+          {/* Control Input Panel */}
           <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'}`}>
             <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
               
