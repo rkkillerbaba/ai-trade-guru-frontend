@@ -64,8 +64,8 @@ function ProfessionalMarkdown({ text, isDark }: { text: string; isDark: boolean 
         const renderedText = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
             return (
-              <strong key={pIdx} className={`font-bold font-sans rounded text-[13px] inline-block tracking-tight px-1.5 py-0.5 mx-0.5 ${
-                isDark ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' : 'text-slate-950 bg-slate-100 border border-slate-200 shadow-sm'
+              <strong key={pIdx} className={`font-bold rounded text-[13px] inline-block tracking-tight px-1.5 py-0.5 mx-0.5 ${
+                isDark ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/30' : 'text-slate-950 bg-slate-100'
               }`}>
                 {part.slice(2, -2)}
               </strong>
@@ -119,12 +119,15 @@ export default function CombinedDashboard() {
   const [uploadStatus, setUploadStatus] = useState('');
   const [attachedFile, setAttachedFile] = useState<AttachedFileMeta | null>(null);
   
+  // 🛡️ Next.js Server Prerendering Safety Gate State
+  const [isClientMounted, setIsClientClientMounted] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // 🌟 FIXED: handleLogout Shifted to Top Layer to Prevent Compile Scoping Failures
+  // Safe callback declaration with absolute scope resolution
   const handleLogout = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('guru_active_session_trader');
@@ -140,6 +143,7 @@ export default function CombinedDashboard() {
 
   // 🔄 Verification Trigger: Load active user data on layout refresh initialization
   useEffect(() => {
+    setIsClientClientMounted(true);
     if (typeof window !== 'undefined') {
       const persistedUserSession = localStorage.getItem('guru_active_session_trader');
       if (persistedUserSession) {
@@ -154,72 +158,11 @@ export default function CombinedDashboard() {
     }
   }, []);
 
-  // Added WhatsApp Floating Timestamp Header Label Engine
-  const getWhatsAppDateLabel = (dateString?: string) => {
-    if (!dateString) return 'TODAY';
-    const msgDate = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    if (msgDate.toDateString() === today.toDateString()) {
-      return 'TODAY';
-    } else if (msgDate.toDateString() === yesterday.toDateString()) {
-      return 'YESTERDAY';
-    } else {
-      return msgDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-  };
-
-  // 📈 FETCH ACTUAL YAHOO FINANCE LIVE FEED MATRICES FROM BACKEND
-  const fetchLiveMarketFeed = useCallback(async () => {
-    if (marketLoading) return;
-    setMarketLoading(true);
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: 'SYSTEM_CALL_FETCH_MARKET_FEED_LOGS' }],
-          engine_id: selectedModel.id
-        }),
-      });
-
-      if (!response.ok) throw new Error('Primary matrix stream offline');
-      
-      const data = await response.json();
-      const rawTextOutput = String(data.content || '').trim();
-      
-      const niftyMatch = rawTextOutput.match(/NIFTY\s*50:\s*([\d,.]+)\s*\(([-+\d,.]+%)\)/i);
-      const bankNiftyMatch = rawTextOutput.match(/BANK\s*NIFTY:\s*([\d,.]+)\s*\(([-+\d,.]+%)\)/i);
-
-      if (niftyMatch) {
-        setNiftyPrice(niftyMatch[1]);
-        setNiftyChange(niftyMatch[2]);
-      }
-      if (bankNiftyMatch) {
-        setBankNiftyPrice(bankNiftyMatch[1]);
-        setBankNiftyChange(bankNiftyMatch[2]);
-      }
-
-      setMarketStatusText(rawTextOutput || 'Yahoo Finance node metrics synchronized completely.');
-    } catch (err) {
-      console.error(err);
-      setMarketStatusText('### **⚠️ Analysis Log Protocol**\n\n**Aapka Trading data upalbdh nahi hai** – Vartamaan me keval live index trend mila hai (**NIFTY +0.39%**, **BANK NIFTY -0.16%**), lekin trading statement, entry/exit timestamp, P&L ya lot size jaisi aavashyak metrics nahi dekh pa rha hu. In data ke bina:\n\n* **Revenge Trading**, **FOMO**, **Panic Exit**, ya **Overtrading** pattern ki pehchan nahi ho sakegi.\n* Market trend ke khilaf ya sath me trade kiye gye position ki vaidhta ka koi cross-verification nahi kiya ja sakta.\n\n### **Agla Kadam:**\nKripya apna trading log, screenshot ya excel file upload karein jisme entry/exit time, strike, lot size, aur P&L vivran hon. Tabhi hum live market trend ke sath safe aur sahi tulna kar, vyavharik loops ki pehchan karke steek coaching de payenge.');
-    } finally {
-      setMarketLoading(false);
-    }
-  }, [marketLoading, selectedModel.id]);
-
   useEffect(() => {
-    if (currentUser && activeTab === 'dashboard') {
-      fetchLiveMarketFeed();
+    if (isClientMounted) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [currentUser, activeTab, fetchLiveMarketFeed]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isClientMounted]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -234,11 +177,13 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Custom regex mapping to fetch only User's First Name
   const getUserFirstName = (fullNameString: string) => {
     if (!fullNameString) return 'Trader';
     return fullNameString.trim().split(' ')[0];
   };
 
+  // 🔐 Authentication Execution Gateway (Sanitized for Next.js Compiler)
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault();
     const lowerUsername = authUsername.trim().toLowerCase();
@@ -318,6 +263,7 @@ export default function CombinedDashboard() {
     }
   };
 
+  // 📝 Dynamic Dashboard Profile Data Synchronization Update
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !editFullName.trim()) return;
@@ -341,6 +287,68 @@ export default function CombinedDashboard() {
       alert(`Sync process halted: ${err.message}`);
     } finally {
       setIsUpdatingName(false);
+    }
+  };
+
+  // FETCH ACTUAL YAHOO FINANCE LIVE FEED MATRICES FROM BACKEND
+  const fetchLiveMarketFeed = useCallback(async () => {
+    if (marketLoading) return;
+    setMarketLoading(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'SYSTEM_CALL_FETCH_MARKET_FEED_LOGS' }],
+          engine_id: selectedModel.id
+        }),
+      });
+
+      if (!response.ok) throw new Error('Primary matrix stream offline');
+      
+      const data = await response.json();
+      const rawTextOutput = String(data.content || '').trim();
+      
+      const niftyMatch = rawTextOutput.match(/NIFTY\s*50:\s*([\d,.]+)\s*\(([-+\d,.]+%)\)/i);
+      const bankNiftyMatch = rawTextOutput.match(/BANK\s*NIFTY:\s*([\d,.]+)\s*\(([-+\d,.]+%)\)/i);
+
+      if (niftyMatch) {
+        setNiftyPrice(niftyMatch[1]);
+        setNiftyChange(niftyMatch[2]);
+      }
+      if (bankNiftyMatch) {
+        setBankNiftyPrice(bankNiftyMatch[1]);
+        setBankNiftyChange(bankNiftyMatch[2]);
+      }
+
+      setMarketStatusText(rawTextOutput || 'Yahoo Finance node metrics synchronized completely.');
+    } catch (err) {
+      console.error(err);
+      setMarketStatusText('### **⚠️ Analysis Log Protocol**\n\n**Aapka Trading data upalbdh nahi hai** – Vartamaan me keval live index trend mila hai (**NIFTY +0.39%**, **BANK NIFTY -0.16%**), lekin trading statement, entry/exit timestamp, P&L ya lot size jaisi aavashyak metrics nahi dekh pa rha hu. In data ke bina:\n\n* **Revenge Trading**, **FOMO**, **Panic Exit**, ya **Overtrading** pattern ki pehchan nahi ho sakegi.\n* Market trend ke khilaf ya sath me trade kiye gye position ki vaidhta ka koi cross-verification nahi kiya ja sakta.\n\n### **Agla Kadam:**\nKripya apna trading log, screenshot ya excel file upload karein jisme entry/exit time, strike, lot size, aur P&L vivran hon. Tabhi hum live market trend ke sath safe aur sahi tulna kar, vyavharik loops ki pehchan karke steek coaching de payenge.');
+    } finally {
+      setMarketLoading(false);
+    }
+  }, [marketLoading, selectedModel.id]);
+
+  useEffect(() => {
+    if (currentUser && activeTab === 'dashboard') {
+      fetchLiveMarketFeed();
+    }
+  }, [currentUser, activeTab, fetchLiveMarketFeed]);
+
+  const getWhatsAppDateLabel = (dateString?: string) => {
+    if (!dateString) return 'TODAY';
+    const msgDate = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (msgDate.toDateString() === today.toDateString()) {
+      return 'TODAY';
+    } else if (msgDate.toDateString() === yesterday.toDateString()) {
+      return 'YESTERDAY';
+    } else {
+      return msgDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
   };
 
@@ -390,6 +398,25 @@ export default function CombinedDashboard() {
       }
     }
   };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const pdfScript = document.createElement('script');
+      pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
+      pdfScript.async = true;
+      document.body.appendChild(pdfScript);
+      pdfScript.onload = () => {
+        if (window && (window as any).pdfjsLib) {
+          (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        }
+      };
+
+      const excelScript = document.createElement('script');
+      excelScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      excelScript.async = true;
+      document.body.appendChild(excelScript);
+    }
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -494,15 +521,57 @@ export default function CombinedDashboard() {
     }
   };
 
+  // 🛡️ Next.js SSR Prerender Guard Protection Layer
+  if (!isClientMounted) {
+    return <div className="min-h-screen bg-[#0b0f19]" />;
+  }
+
+  // 🔐 RENDERING: View Guard Authentication Layout
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex items-center justify-center font-sans px-4 relative">
+        <div className="w-full max-w-md bg-[#0f1626] border border-slate-800/80 rounded-3xl p-7 sm:p-8 shadow-2xl relative z-10 animate-fadeIn">
+          <div className="flex flex-col items-center mb-7">
+            <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl text-cyan-400 mb-2.5">
+              <BarChart3 size={24} />
+            </div>
+            <h2 className="text-xl font-black tracking-tight font-sans">AI TRADE GURU PRO</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mt-1">Behavioral Console Registry</p>
+          </div>
+
+          <form onSubmit={handleAuthAction} className="space-y-4">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Unique Username</label>
+              <input type="text" required placeholder="e.g., killebaba24" value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} className="w-full bg-[#121b2e] border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-medium font-sans" />
+            </div>
+
+            {authMode === 'signup' && (
+              <div className="animate-fadeIn">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Full Display Name</label>
+                <input type="text" required={authMode === 'signup'} placeholder="e.g., Rishi Kumar" value={authFullName} onChange={(e) => setAuthFullName(e.target.value)} className="w-full bg-[#121b2e] border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-medium font-sans" />
+              </div>
+            )}
+
+            <button type="submit" disabled={authLoading} className="w-full bg-cyan-500 text-slate-950 font-extrabold py-3.5 rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/10 disabled:opacity-40 font-sans">
+              <span>{authLoading ? 'Verifying Node Matrix...' : (authMode === 'login' ? 'Login Dashboard' : 'Generate Console')}</span>
+            </button>
+          </form>
+
+          <div className="mt-6 text-center border-t border-slate-800/80 pt-4">
+            <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="text-xs font-bold text-cyan-400 hover:underline font-mono tracking-wide">
+              {authMode === 'login' ? "Naya Terminal create karein? SignUp" : "Pehle se account hai? Login Gateway"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex flex-col h-screen antialiased transition-colors duration-200 ${
       isDarkMode ? 'bg-[#0b0f19] text-slate-100' : 'bg-slate-50/60 text-slate-800'
     }`}>
       
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet" />
-
       {/* Header Bar */}
       <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-40 border-b transition-colors ${
         isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'
@@ -514,7 +583,7 @@ export default function CombinedDashboard() {
           <div>
             <h1 className="text-xs sm:text-sm font-black font-sans tracking-tight uppercase">AI Guru</h1>
             <p className="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase mt-0.5">
-              Hello, <span className="text-cyan-400 font-black">{getUserFirstName(currentUser.fullName)}</span> 👋
+              Hello, <span className="text-cyan-400 font-black">{getUserFirstName(currentUser?.fullName || '')}</span> 👋
             </p>
           </div>
         </div>
@@ -530,14 +599,14 @@ export default function CombinedDashboard() {
               <div className={`absolute right-0 mt-2.5 w-64 rounded-2xl border p-4 shadow-2xl backdrop-blur-md z-50 animate-fadeIn ${isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'}`}>
                 <div className="border-b border-slate-800/60 pb-2.5 mb-3">
                   <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block">Terminal Node Profile</span>
-                  <span className="text-xs font-mono font-bold text-cyan-400">@{currentUser.username}</span>
+                  <span className="text-xs font-mono font-bold text-cyan-400">@{currentUser?.username || ''}</span>
                 </div>
                 <form onSubmit={handleProfileUpdate} className="space-y-3">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-mono">Edit Display Name</span>
                     <input type="text" value={editFullName} onChange={(e) => setEditFullName(e.target.value)} className={`w-full border rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none font-sans ${isDarkMode ? 'bg-[#121b2e] border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`} />
                   </div>
-                  <button type="submit" disabled={isUpdatingName} className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all">Save System Changes</button>
+                  <button type="submit" disabled={isUpdatingName} className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all shadow-md">Save System Changes</button>
                 </form>
                 <div className="border-t border-slate-800/60 mt-4 pt-3">
                   <button type="button" onClick={handleLogout} className="w-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1.5 font-sans"><LogOut size={12} /><span>Exit Console Session</span></button>
@@ -600,6 +669,7 @@ export default function CombinedDashboard() {
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       ) : (
@@ -681,6 +751,7 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
+          {/* Control Input Panel */}
           <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'}`}>
             <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
               
@@ -739,13 +810,7 @@ export default function CombinedDashboard() {
                     <FileText size={16} className={isDarkMode ? 'text-cyan-400' : 'text-blue-600'} />
                     <span className="text-xs font-bold truncate tracking-tight">{attachedFile.name}</span>
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setAttachedFile(null)} 
-                    className={`p-1 rounded-md transition-colors hover:bg-slate-500/20 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
-                  >
-                    <X size={14} className="stroke-[3]" />
-                  </button>
+                  <button type="button" onClick={() => setAttachedFile(null)} className={`p-1 rounded-md transition-colors hover:bg-slate-500/20 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}><X size={14} className="stroke-[3]" /></button>
                 </div>
               )}
 
@@ -796,6 +861,7 @@ export default function CombinedDashboard() {
                   </button>
                 </div>
               </div>
+
             </div>
           </footer>
         </div>
