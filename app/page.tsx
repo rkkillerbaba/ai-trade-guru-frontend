@@ -89,7 +89,7 @@ export default function CombinedDashboard() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'chat'>('dashboard');
   
-  // 🔐 Authentication States Framework
+  // 🔐 Authentication States Framework Fixed
   const [currentUser, setCurrentUser] = useState<{ username: string; fullName: string } | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authUsername, setAuthUsername] = useState('');
@@ -124,12 +124,12 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 🔐 Authentication Execution Gateway
+  // 🔐 Authentication Execution Gateway (Fully Sanitized for Next.js Build Compiler)
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanUsername = authUsername.trim().toLowerCase();
+    const lowerUsername = authUsername.trim().toLowerCase();
     
-    if (!cleanUsername) {
+    if (!lowerUsername) {
       alert("Kripya username zaroor enter karein.");
       return;
     }
@@ -148,7 +148,7 @@ export default function CombinedDashboard() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: cleanUsername, full_name: cleanFullName })
+          body: JSON.stringify({ username: lowerUsername, full_name: cleanFullName })
         });
         
         if (!response.ok) throw new Error("Backend synchronization latency.");
@@ -156,7 +156,7 @@ export default function CombinedDashboard() {
         // Push user details matrix safely into trader_users table structure
         const { error: dbError } = await supabase
           .from('trader_users')
-          .insert([{ username: cleanUsername, full_name: cleanFullName }]);
+          .insert([{ username: lowerUsername, full_name: cleanFullName }]);
 
         if (dbError && dbError.code === '23505') {
           alert("Yeh username pehle se occupied hai bhai. Koi doosra unique select karein.");
@@ -164,13 +164,13 @@ export default function CombinedDashboard() {
           return;
         }
 
-        setCurrentUser({ username: cleanUsername, fullName: cleanFullName });
+        setCurrentUser({ username: lowerUsername, fullName: cleanFullName });
       } else {
         // Login Processing Checks
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: cleanUsername })
+          body: JSON.stringify({ username: lowerUsername })
         });
 
         if (!response.ok) throw new Error("User parsing execution logs broken.");
@@ -178,7 +178,7 @@ export default function CombinedDashboard() {
         const { data, error: fetchError } = await supabase
           .from('trader_users')
           .select('*')
-          .eq('username', cleanUsername)
+          .eq('username', lowerUsername)
           .single();
 
         if (fetchError || !data) {
@@ -698,4 +698,119 @@ export default function CombinedDashboard() {
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setIsMenuOpen(!isMenuOpen
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className={`text-[11px] font-bold py-1.5 px-3 rounded-lg border transition-all flex items-center gap-1.5 shadow-sm select-none ${
+                      isDarkMode 
+                        ? 'bg-[#121b2e] border-slate-700 text-cyan-400 hover:border-cyan-500' 
+                        : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>{selectedModel.name}</span>
+                    <ChevronUp size={12} className={`transform transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isMenuOpen && (
+                    <div className={`absolute right-0 bottom-full mb-2 w-48 rounded-xl border p-1.5 shadow-xl backdrop-blur-md transition-all z-50 ${
+                      isDarkMode ? 'bg-[#0f1626]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'
+                    }`}>
+                      <div className="space-y-0.5">
+                        {AVAILABLE_MODELS.map((model) => {
+                          const isSelected = selectedModel.id === model.id;
+                          return (
+                            <button
+                              key={model.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedModel(model);
+                                setIsMenuOpen(false);
+                              }}
+                              className={`w-full text-left text-xs font-semibold px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${
+                                isSelected 
+                                  ? (isDarkMode ? 'bg-slate-800/80 text-cyan-400 font-bold' : 'bg-slate-50 text-blue-600 font-bold') 
+                                  : (isDarkMode ? 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900')
+                              }`}
+                            >
+                              <span>{model.name}</span>
+                              {isSelected && <Check size={13} className="shrink-0 stroke-[3] text-[#d4af37]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {attachedFile && (
+                <div className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border max-w-sm transition-all shadow-sm animate-fadeIn ${
+                  isDarkMode ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}>
+                  <div className="flex items-center gap-2 truncate">
+                    <FileText size={16} className={isDarkMode ? 'text-cyan-400' : 'text-blue-600'} />
+                    <span className="text-xs font-bold truncate tracking-tight">{attachedFile.name}</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setAttachedFile(null)} 
+                    className={`p-1 rounded-md transition-colors hover:bg-slate-500/20 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                  >
+                    <X size={14} className="stroke-[3]" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  onChange={handleFileUpload} 
+                  accept=".pdf,.xlsx,.xls,.csv,.txt,.log,.json,.docx,.jpg,.jpeg,.png,.webp" 
+                />
+                
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className={`w-11 h-11 rounded-xl border transition-all shrink-0 flex items-center justify-center ${
+                    isDarkMode ? 'bg-[#121b2e] border-slate-700 text-slate-400 hover:text-cyan-400' : 'bg-slate-50 border-slate-300 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <Paperclip size={18} />
+                </button>
+
+                <div className="relative flex-1 flex items-center bg-transparent">
+                  <textarea 
+                    rows={1}
+                    value={input} 
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={attachedFile ? "Ask anything about this file..." : `Type or drop files via ${selectedModel.name}...`} 
+                    className={`w-full border rounded-xl pl-4 pr-14 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${
+                      isDarkMode 
+                        ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' 
+                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
+                    }`}
+                  />
+                  
+                  <button 
+                    type="button"
+                    disabled={loading || (!input.trim() && !attachedFile) || uploadingFile}
+                    onClick={sendMessage}
+                    className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${
+                      isDarkMode 
+                        ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' 
+                        : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
+                    }`}
+                    style={{ top: '50%', transform: 'translateY(-50%)' }}
+                  >
+                    <Send size={15} className="stroke-[2.5]" />
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </footer>
+        </div>
+      )}
+    </div>
+  );
+}
