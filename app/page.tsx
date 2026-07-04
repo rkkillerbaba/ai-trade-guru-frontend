@@ -119,7 +119,7 @@ export default function CombinedDashboard() {
   const [uploadStatus, setUploadStatus] = useState('');
   const [attachedFile, setAttachedFile] = useState<AttachedFileMeta | null>(null);
   
-  // 🛡️ Next.js Server Prerendering Safety Gate State
+  // Next.js SSR Prerender Guard Protection Layer State
   const [isClientMounted, setIsClientClientMounted] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,7 +127,7 @@ export default function CombinedDashboard() {
   const profileRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Safe callback declaration with absolute scope resolution
+  // Safe logout function
   const handleLogout = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('guru_active_session_trader');
@@ -177,7 +177,6 @@ export default function CombinedDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Custom regex mapping to fetch only User's First Name
   const getUserFirstName = (fullNameString: string) => {
     if (!fullNameString) return 'Trader';
     return fullNameString.trim().split(' ')[0];
@@ -195,6 +194,7 @@ export default function CombinedDashboard() {
 
     setAuthLoading(true);
     try {
+      const baseApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
       if (authMode === 'signup') {
         const cleanFullName = authFullName.trim();
         if (!cleanFullName) {
@@ -203,7 +203,7 @@ export default function CombinedDashboard() {
           return;
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/signup`, {
+        const response = await fetch(`${baseApiUrl}/api/v1/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: lowerUsername, full_name: cleanFullName })
@@ -228,7 +228,7 @@ export default function CombinedDashboard() {
         setCurrentUser(authenticatedUserData);
         setEditFullName(cleanFullName);
       } else {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/login`, {
+        const response = await fetch(`${baseApiUrl}/api/v1/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: lowerUsername })
@@ -263,7 +263,6 @@ export default function CombinedDashboard() {
     }
   };
 
-  // 📝 Dynamic Dashboard Profile Data Synchronization Update
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !editFullName.trim()) return;
@@ -295,7 +294,8 @@ export default function CombinedDashboard() {
     if (marketLoading) return;
     setMarketLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/analyze`, {
+      const baseApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const response = await fetch(`${baseApiUrl}/api/v1/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -456,6 +456,7 @@ export default function CombinedDashboard() {
     }
   };
 
+  // 🌟 BULLETPROOFED SEND MESSAGE PIPELINE: SANITIZED OBJECT STRUCTS & SAFE ENVD ROUTING
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!input.trim() && !attachedFile) || loading || uploadingFile || !sessionId) return;
@@ -474,30 +475,36 @@ export default function CombinedDashboard() {
     }
 
     const userMessage: ChatMessage = { role: 'user', content: dynamicDisplayContent, timestamp: currentISOString };
-    const updatedMessagesForAI = [...messages, { role: 'user', content: rawUserPayloadContent } as ChatMessage];
+    
+    // Clear out extra systems parameters safely before array submission mapping loops
+    const updatedMessagesForAI = messages.filter(m => m && m.content).map(msg => ({
+      role: msg.role === 'system' ? 'user' : msg.role, 
+      content: msg.content
+    }));
+    
+    updatedMessagesForAI.push({ role: 'user', content: rawUserPayloadContent });
     
     setMessages((prev) => [...prev, userMessage]);
-    setInput(''); setAttachedFile(null); setLoading(true);
+    setInput('');
+    setAttachedFile(null);
+    setLoading(true);
 
     await supabase.from('chat_messages').insert([
       { session_id: sessionId, role: 'user', content: dynamicDisplayContent }
     ]);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/analyze`, {
+      const baseApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const response = await fetch(`${baseApiUrl}/api/v1/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: updatedMessagesForAI.map(msg => ({
-            role: msg.role || "user",
-            content: msg.content || "",
-            reasoning_details: msg.reasoning_details || null
-          })),
+          messages: updatedMessagesForAI,
           engine_id: selectedModel.id
         }),
       });
 
-      if (!response.ok) throw new Error('Gateway route failure');
+      if (!response.ok) throw new Error('Gateway request node block execution error');
 
       const data = await response.json();
       let parsedContent = data.content || data.response || data.text || "";
@@ -516,17 +523,20 @@ export default function CombinedDashboard() {
       ]);
     } catch (error) {
       console.error(error);
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: '⚠️ **Communication Link Timeout**: Connection establish hone mein delay ho raha hai bhai. Kripya **Send Button** par fir se click kijiye ya doosra model try karein.',
+        timestamp: new Date().toISOString()
+      }]);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🛡️ Next.js SSR Prerender Guard Protection Layer
   if (!isClientMounted) {
     return <div className="min-h-screen bg-[#0b0f19]" />;
   }
 
-  // 🔐 RENDERING: View Guard Authentication Layout
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex items-center justify-center font-sans px-4 relative">
@@ -573,9 +583,7 @@ export default function CombinedDashboard() {
     }`}>
       
       {/* Header Bar */}
-      <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-40 border-b transition-colors ${
-        isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'
-      }`}>
+      <header className={`px-4 py-3.5 sm:px-6 flex justify-between items-center relative z-40 border-b transition-colors ${isDarkMode ? 'bg-[#0f1626] border-slate-800 shadow-md' : 'bg-white border-slate-200/80 shadow-sm'}`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg text-white transition-colors ${isDarkMode ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-slate-900'}`}>
             <BarChart3 size={18} className={isDarkMode ? 'text-cyan-400' : 'text-white'} />
@@ -606,7 +614,7 @@ export default function CombinedDashboard() {
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-mono">Edit Display Name</span>
                     <input type="text" value={editFullName} onChange={(e) => setEditFullName(e.target.value)} className={`w-full border rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none font-sans ${isDarkMode ? 'bg-[#121b2e] border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`} />
                   </div>
-                  <button type="submit" disabled={isUpdatingName} className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all shadow-md">Save System Changes</button>
+                  <button type="submit" disabled={isUpdatingName} className="w-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg hover:bg-cyan-400 transition-all">Save System Changes</button>
                 </form>
                 <div className="border-t border-slate-800/60 mt-4 pt-3">
                   <button type="button" onClick={handleLogout} className="w-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1.5 font-sans"><LogOut size={12} /><span>Exit Console Session</span></button>
@@ -669,11 +677,9 @@ export default function CombinedDashboard() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       ) : (
-        /* 💬 Dynamic AI Analytics Engine Chat Panel View */
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className={`flex-1 overflow-y-auto p-4 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0b0f19]' : 'bg-gradient-to-b from-slate-50 to-white'}`}>
             <div className="max-w-3xl mx-auto space-y-6 py-2 relative z-10">
@@ -751,7 +757,6 @@ export default function CombinedDashboard() {
             </div>
           </div>
 
-          {/* Control Input Panel */}
           <footer className={`p-3 sm:p-4 border-t relative z-10 transition-colors ${isDarkMode ? 'bg-[#0f1626] border-slate-800' : 'bg-white border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'}`}>
             <div className="max-w-3xl mx-auto flex flex-col gap-2.5">
               
@@ -788,9 +793,7 @@ export default function CombinedDashboard() {
                                 setIsMenuOpen(false);
                               }}
                               className={`w-full text-left text-xs font-semibold px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${
-                                isSelected 
-                                  ? (isDarkMode ? 'bg-slate-800/80 text-cyan-400 font-bold' : 'bg-slate-50 text-blue-600 font-bold') 
-                                  : (isDarkMode ? 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900')
+                                isSelected ? (isDarkMode ? 'bg-slate-800/80 text-cyan-400 font-bold' : 'bg-slate-50 text-blue-600 font-bold') : (isDarkMode ? 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900')
                               }`}
                             >
                               <span>{model.name}</span>
@@ -840,9 +843,7 @@ export default function CombinedDashboard() {
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={attachedFile ? "Ask anything about this file..." : `Type or drop files via ${selectedModel.name}...`} 
                     className={`w-full border rounded-xl pl-4 pr-14 py-3 text-sm focus:outline-none transition-all resize-none min-h-[44px] max-h-[100px] font-medium leading-normal ${
-                      isDarkMode 
-                        ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' 
-                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
+                      isDarkMode ? 'bg-[#121b2e] border-slate-700 text-slate-100 placeholder-slate-500 focus:border-cyan-500/60' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white'
                     }`}
                   />
                   
@@ -851,9 +852,7 @@ export default function CombinedDashboard() {
                     disabled={loading || (!input.trim() && !attachedFile) || uploadingFile}
                     onClick={sendMessage}
                     className={`absolute right-2 w-9 h-9 rounded-xl transition-all flex items-center justify-center shadow-md ${
-                      isDarkMode 
-                        ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' 
-                        : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
+                      isDarkMode ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-20' : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30'
                     }`}
                     style={{ top: '50%', transform: 'translateY(-50%)' }}
                   >
@@ -861,7 +860,6 @@ export default function CombinedDashboard() {
                   </button>
                 </div>
               </div>
-
             </div>
           </footer>
         </div>
